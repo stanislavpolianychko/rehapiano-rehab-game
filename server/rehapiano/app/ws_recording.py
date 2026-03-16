@@ -21,7 +21,7 @@ DEFAULT_DURATION_S = 300       # klientom požadovaná dĺžka (ak nič, použij
 HARD_CAP_S = 900               # server-side tvrdý strop
 DEFAULT_COMPRESS = True
 
-def _iso(ts: float | None) -> Optional[str]:
+def _iso(ts: Optional[float]) -> Optional[str]:
     if ts is None: return None
     import datetime
     return datetime.datetime.utcfromtimestamp(ts).isoformat() + "Z"

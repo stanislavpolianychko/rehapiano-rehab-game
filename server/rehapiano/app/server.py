@@ -413,8 +413,10 @@ async def virtual_key_event(payload: dict):
     JSON:
       {
         "key": "q",
-        "action": "down" | "up"
+        "action": "down" | "up",
+        "direction": "compression" | "extension"   (optional, default: "compression")
       }
+    Uppercase key is shorthand for extension: {"key": "Q", "action": "down"}
     """
     if virtual_manager is None:
         raise HTTPException(500, "virtual_manager_not_initialized")
@@ -422,18 +424,24 @@ async def virtual_key_event(payload: dict):
     if not virtual_manager.enabled:
         raise HTTPException(400, "virtual_mode_not_enabled")
 
-    key = payload.get("key", "").lower()
+    raw_key = payload.get("key", "")
     action = payload.get("action", "").lower()
+    dir_str = payload.get("direction", "").lower()
 
-    if not key or action not in ("down", "up"):
+    if not raw_key or action not in ("down", "up"):
         raise HTTPException(400, "invalid_key_or_action")
 
+    # Determine direction: uppercase key or explicit "extension" → negative
+    is_extension = raw_key.isupper() or dir_str == "extension"
+    direction = -1 if is_extension else 1
+    key = raw_key.lower()
+
     if action == "down":
-        virtual_manager.key_down(key)
+        virtual_manager.key_down(key, direction)
     else:
         virtual_manager.key_up(key)
 
-    return {"ok": True, "key": key, "action": action}
+    return {"ok": True, "key": key, "action": action, "direction": "extension" if is_extension else "compression"}
 
 
 # ---------- Game Metadata API ----------

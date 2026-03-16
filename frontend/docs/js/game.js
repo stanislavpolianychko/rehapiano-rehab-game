@@ -210,17 +210,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     }
     return to.concat(ar || Array.prototype.slice.call(from));
 };
-var __values = (this && this.__values) || function(o) {
-    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-    if (m) return m.call(o);
-    if (o && typeof o.length === "number") return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
-};
 var Floppy;
 (function (Floppy) {
     var Game = (function () {
@@ -233,10 +222,9 @@ var Floppy;
             this.progressionMessageElement = null;
             this.progressionMessageTimeout = null;
             this.rehaPianoEnabled = false;
-            this.hasLoggedControlVelocity = false;
-            this.hasLoggedBelowThreshold = false;
-            this.hasLoggedValidInput = false;
-            this.hasLoggedTick = false;
+            this.rehaPianoApiBase = '';
+            this.hasLoggedFirstInput = false;
+            this.virtualKeysDown = new Set();
             this.medals = [
                 [40, 'platinum'],
                 [30, 'gold'],
@@ -257,28 +245,27 @@ var Floppy;
             this.highScore = Floppy.storage.getHighScore();
             this.currentScore = 0;
             this.setGameOptionButtons(options);
-            this.rehaPianoThreshold = (_a = options.rehaPianoThreshold) !== null && _a !== void 0 ? _a : 0.01;
-            this.rehaPianoScale = (_b = options.rehaPianoScale) !== null && _b !== void 0 ? _b : 4.0;
+            this.rehaPianoThreshold = (_a = options.rehaPianoThreshold) !== null && _a !== void 0 ? _a : 5.0;
+            this.rehaPianoScale = (_b = options.rehaPianoScale) !== null && _b !== void 0 ? _b : 0.01;
             this.rehaPianoEnabled = (_c = options.rehaPianoEnabled) !== null && _c !== void 0 ? _c : true;
-            var rehaPianoUrl = (_d = options.rehaPianoUrl) !== null && _d !== void 0 ? _d : 'ws://localhost:8005';
+            var rehaPianoUrl = (_d = options.rehaPianoUrl) !== null && _d !== void 0 ? _d : 'ws://localhost:5555/ws';
             this.rehaPiano = new Floppy.RehaPianoConnection(rehaPianoUrl);
+            this.rehaPianoApiBase = rehaPianoUrl.replace(/^ws/, 'http').replace(/\/ws$/, '');
             if (this.rehaPianoEnabled) {
-                console.log('[Game] 🔌 Attempting to connect to RehaPiano at', rehaPianoUrl);
-                console.log('[Game] ⚙️ Settings - Threshold:', this.rehaPianoThreshold, 'Scale:', this.rehaPianoScale);
+                console.log('[Game] Connecting to RehaPiano at', rehaPianoUrl);
                 this.rehaPiano.connect().then(function () {
-                    console.log('[Game] ✅ RehaPiano connected successfully!');
-                    gameDebugger.log('RehaPiano connected successfully');
-                    _this.createRehaPianoStatusIndicator(true);
+                    console.log('[Game] RehaPiano connected');
+                    gameDebugger.log('RehaPiano connected');
+                    _this.createRehaPianoStatusIndicator();
+                    _this.enableVirtualMode();
                 }).catch(function (error) {
-                    console.error('[Game] ❌ RehaPiano connection failed, using keyboard fallback:', error);
-                    gameDebugger.log('RehaPiano connection failed, using keyboard fallback:', error);
+                    console.warn('[Game] RehaPiano connection failed, keyboard fallback:', error);
                     _this.rehaPianoEnabled = false;
-                    _this.createRehaPianoStatusIndicator(false);
+                    _this.createRehaPianoStatusIndicator();
                 });
             }
             else {
-                console.log('[Game] ⏸️ RehaPiano is disabled, using keyboard control');
-                this.createRehaPianoStatusIndicator(false);
+                this.createRehaPianoStatusIndicator();
             }
             this.createProgressionMessageElement();
             document.addEventListener('keydown', this.handleKeyDown.bind(this));
@@ -357,6 +344,16 @@ var Floppy;
             debugMode.href += options.isDebugOn ? '' : 'debug';
         };
         Game.prototype.handleKeyDown = function (ev) {
+            var keyLower = ev.key.toLowerCase();
+            if (Game.VIRTUAL_KEYS.has(keyLower) && this.rehaPianoEnabled && this.rehaPiano.isConnected) {
+                if (!this.virtualKeysDown.has(ev.key)) {
+                    this.virtualKeysDown.add(ev.key);
+                    var apiKey = ev.shiftKey ? keyLower.toUpperCase() : keyLower;
+                    this.sendVirtualKey(apiKey, 'down');
+                }
+                ev.preventDefault();
+                return;
+            }
             if (this.state === Floppy.Common.GameState.SplashScreen) {
                 this.start();
                 return;
@@ -378,10 +375,34 @@ var Floppy;
             }
         };
         Game.prototype.handleKeyUp = function (ev) {
+            var keyLower = ev.key.toLowerCase();
+            if (Game.VIRTUAL_KEYS.has(keyLower) && this.virtualKeysDown.has(ev.key)) {
+                this.virtualKeysDown.delete(ev.key);
+                this.sendVirtualKey(keyLower, 'up');
+                ev.preventDefault();
+                return;
+            }
             if (ev.key === 'ArrowUp' || ev.key === 'w' || ev.key === 'W' ||
                 ev.key === 'ArrowDown' || ev.key === 's' || ev.key === 'S') {
                 this.targetControlVelocity = 0;
             }
+        };
+        Game.prototype.enableVirtualMode = function () {
+            fetch(this.rehaPianoApiBase + "/api/virtual/enable", { method: 'POST' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                console.log('[Game] Virtual mode enabled:', data);
+                console.log('[Game] Press Q/W/E/R/T (left) or Y/U/I/O/P (right) for compression');
+                console.log('[Game] Hold Shift + same keys for extension (decompression)');
+            })
+                .catch(function (err) { return console.warn('[Game] Could not enable virtual mode:', err); });
+        };
+        Game.prototype.sendVirtualKey = function (key, action) {
+            fetch(this.rehaPianoApiBase + "/api/virtual/key", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: key, action: action }),
+            }).catch(function () { });
         };
         Game.prototype.updateControlVelocity = function () {
             var accelerationRate = this.levelProgression.getAccelerationRate();
@@ -394,110 +415,52 @@ var Floppy;
             }
         };
         Game.prototype.getRehaPianoControlVelocity = function () {
-            var e_1, _a;
-            if (!this.rehaPianoEnabled || !this.rehaPiano.isConnected) {
-                if (!this.hasLoggedControlVelocity) {
-                    this.hasLoggedControlVelocity = true;
-                    console.warn('[Game] ⚠️ RehaPiano not enabled or not connected');
-                }
+            if (!this.rehaPianoEnabled || !this.rehaPiano.isConnected)
                 return 0;
-            }
-            if (!this.rehaPiano.isDataFresh()) {
-                if (Math.random() < 0.05) {
-                    console.warn('[Game] ⚠️ RehaPiano data is stale');
-                }
+            if (!this.rehaPiano.isDataFresh())
                 return 0;
-            }
-            var averageValue = this.rehaPiano.getAverageFingerValue();
-            if (!this.hasLoggedControlVelocity || Math.abs(averageValue) > 0.01) {
-                if (!this.hasLoggedControlVelocity) {
-                    this.hasLoggedControlVelocity = true;
-                    console.log('[Game] 🎮 getRehaPianoControlVelocity called - Avg:', averageValue.toFixed(4), 'Threshold:', this.rehaPianoThreshold);
-                }
-            }
-            var rawValues = this.rehaPiano.getRawSensorValues();
-            if (rawValues && Math.abs(averageValue) > 0.01 && Math.random() < 0.1) {
-                var fingerPositions = [0, 1, 2, 3, 4, 12, 11, 10, 9, 8];
-                var activeChannels = fingerPositions.map(function (i) { return ({ idx: i, val: rawValues[i] }); }).filter(function (c) { return Math.abs(c.val) > 0.01; });
-                if (activeChannels.length > 0) {
-                    console.log('[Game] 🔍 Active channels:', activeChannels.map(function (c) { return "[" + c.idx + "]=" + c.val.toFixed(3); }).join(', '), 'Average:', averageValue.toFixed(4));
-                }
-            }
-            var hasValidInput = false;
-            if (rawValues) {
-                var fingerPositions = [0, 1, 2, 3, 4, 12, 11, 10, 9, 8];
-                try {
-                    for (var fingerPositions_1 = __values(fingerPositions), fingerPositions_1_1 = fingerPositions_1.next(); !fingerPositions_1_1.done; fingerPositions_1_1 = fingerPositions_1.next()) {
-                        var channelIndex = fingerPositions_1_1.value;
-                        if (Math.abs(rawValues[channelIndex]) >= this.rehaPianoThreshold * 5) {
-                            hasValidInput = true;
-                            break;
-                        }
-                    }
-                }
-                catch (e_1_1) { e_1 = { error: e_1_1 }; }
-                finally {
-                    try {
-                        if (fingerPositions_1_1 && !fingerPositions_1_1.done && (_a = fingerPositions_1.return)) _a.call(fingerPositions_1);
-                    }
-                    finally { if (e_1) throw e_1.error; }
-                }
-            }
-            if (!hasValidInput && Math.abs(averageValue) < this.rehaPianoThreshold) {
-                if (Math.abs(averageValue) > 0.001 && (Math.random() < 0.1 || !this.hasLoggedBelowThreshold)) {
-                    if (!this.hasLoggedBelowThreshold) {
-                        this.hasLoggedBelowThreshold = true;
-                    }
-                    console.log('[Game] 📉 Value below threshold - Avg:', averageValue.toFixed(4), 'threshold:', this.rehaPianoThreshold);
-                    if (rawValues) {
-                        var maxChannel = Math.max.apply(Math, __spreadArray([], __read([0, 1, 2, 3, 4, 12, 11, 10, 9, 8].map(function (i) { return Math.abs(rawValues[i]); })), false));
-                        console.log('[Game] 📊 Max channel value:', maxChannel.toFixed(4), '(need', (this.rehaPianoThreshold * 10).toFixed(4), 'for single channel)');
-                    }
-                    if (Math.abs(averageValue) > 0.01) {
-                        console.log('[Game] 💡 Try pressing more keys or use z/x/c for higher intensity');
-                    }
-                }
+            var avgForce = this.rehaPiano.getAverageFingerValue();
+            if (Math.abs(avgForce) < this.rehaPianoThreshold)
                 return 0;
-            }
-            var velocity = -averageValue * this.rehaPianoScale;
-            if (Math.abs(averageValue) > 0.01 && Math.random() < 0.2) {
-                var inputMagnitude = Math.abs(averageValue);
-                var pressureLevel = inputMagnitude * 4;
-                console.log('[Game] 🔍 Pressure level:', pressureLevel.toFixed(2), 'Input:', averageValue.toFixed(4), '→ velocity:', velocity.toFixed(4));
-            }
+            var velocity = avgForce * this.rehaPianoScale;
             var maxVelocity = this.getMaxControlVelocity();
             velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity));
-            if (!this.hasLoggedValidInput || Math.abs(velocity) > 0.05) {
-                if (!this.hasLoggedValidInput) {
-                    this.hasLoggedValidInput = true;
-                }
-                var direction = velocity < 0 ? 'UP' : velocity > 0 ? 'DOWN' : 'NONE';
-                console.log('[Game] ✅ Valid control input! Velocity:', velocity.toFixed(3), 'Direction:', direction, 'from average:', averageValue.toFixed(3));
-            }
-            if (Math.abs(velocity) > 0.1 && Math.random() < 0.2) {
-                console.log('[Game] 🎮 Control velocity:', velocity.toFixed(3), 'from average:', averageValue.toFixed(3));
+            if (!this.hasLoggedFirstInput && Math.abs(velocity) > 0.01) {
+                this.hasLoggedFirstInput = true;
+                var dir = avgForce > 0 ? 'compression/DOWN' : 'extension/UP';
+                console.log('[Game] RehaPiano input — force:', avgForce.toFixed(1), dir, 'velocity:', velocity.toFixed(3));
             }
             return velocity;
         };
-        Game.prototype.createRehaPianoStatusIndicator = function (connected) {
+        Game.prototype.createRehaPianoStatusIndicator = function () {
             var _this = this;
             var existing = document.getElementById('rehapiano-status');
-            if (existing) {
+            if (existing)
                 existing.remove();
-            }
             var indicator = document.createElement('div');
             indicator.id = 'rehapiano-status';
-            indicator.style.cssText = "\n                position: fixed;\n                top: 10px;\n                right: 10px;\n                padding: 10px 15px;\n                border-radius: 5px;\n                font-family: monospace;\n                font-size: 12px;\n                z-index: 10000;\n                background: " + (connected ? 'rgba(76, 175, 80, 0.9)' : 'rgba(244, 67, 54, 0.9)') + ";\n                color: white;\n                font-weight: bold;\n            ";
-            indicator.textContent = "RehaPiano: " + (connected ? '✅ Connected' : '❌ Disconnected');
+            indicator.style.cssText = "\n                position: fixed;\n                top: 10px;\n                right: 10px;\n                padding: 8px 12px;\n                border-radius: 5px;\n                font-family: monospace;\n                font-size: 11px;\n                z-index: 10000;\n                color: white;\n                font-weight: bold;\n                background: rgba(244, 67, 54, 0.9);\n            ";
             document.body.appendChild(indicator);
             setInterval(function () {
-                var isConnected = _this.rehaPianoEnabled && _this.rehaPiano.isConnected;
-                var isDataFresh = _this.rehaPiano.isDataFresh();
-                var avgValue = _this.rehaPiano.getAverageFingerValue();
-                indicator.textContent = "RehaPiano: " + (isConnected ? '✅' : '❌') + " " + (isDataFresh ? '📡' : '⏸️') + " " + avgValue.toFixed(2);
-                indicator.style.background = isConnected && isDataFresh
+                var wsOk = _this.rehaPianoEnabled && _this.rehaPiano.isConnected;
+                var left = _this.rehaPiano.leftHandConnected;
+                var right = _this.rehaPiano.rightHandConnected;
+                var fresh = _this.rehaPiano.isDataFresh();
+                var avg = _this.rehaPiano.getAverageFingerValue();
+                var parts = ['RP:'];
+                if (!wsOk) {
+                    parts.push('disconnected');
+                }
+                else {
+                    parts.push(left ? 'L:ok' : 'L:--');
+                    parts.push(right ? 'R:ok' : 'R:--');
+                    if (fresh)
+                        parts.push(avg.toFixed(0));
+                }
+                indicator.textContent = parts.join(' ');
+                indicator.style.background = wsOk && (left || right) && fresh
                     ? 'rgba(76, 175, 80, 0.9)'
-                    : isConnected
+                    : wsOk
                         ? 'rgba(255, 152, 0, 0.9)'
                         : 'rgba(244, 67, 54, 0.9)';
             }, 500);
@@ -551,13 +514,7 @@ var Floppy;
             splashImage.classList.remove('visible');
             this.state = Floppy.Common.GameState.Playing;
             this.gameLoop = setInterval(this.tick.bind(this), 1000 / 60);
-            console.log('[Game] 🎮 Game started! Game loop running at 60 FPS');
-            if (this.rehaPianoEnabled && this.rehaPiano.isConnected) {
-                console.log('[Game] 🎹 RehaPiano control is active - bird will move based on sensor data');
-            }
-            else {
-                console.log('[Game] ⌨️ Keyboard control is active - use arrow keys or WASD');
-            }
+            console.log('[Game] Started. Control:', this.rehaPianoEnabled && this.rehaPiano.isConnected ? 'RehaPiano' : 'Keyboard');
             this.applyProgressionSettings();
         };
         Game.prototype.die = function () {
@@ -694,10 +651,6 @@ var Floppy;
             var controlVelocity = 0;
             if (this.rehaPianoEnabled && this.rehaPiano.isConnected) {
                 controlVelocity = this.getRehaPianoControlVelocity();
-                if (!this.hasLoggedTick) {
-                    this.hasLoggedTick = true;
-                    console.log('[Game] 🔄 Game tick - RehaPiano control velocity:', controlVelocity.toFixed(4));
-                }
             }
             else {
                 this.updateControlVelocity();
@@ -719,6 +672,7 @@ var Floppy;
             requestAnimationFrame(this.draw.bind(this));
             this.bird.draw();
         };
+        Game.VIRTUAL_KEYS = new Set(['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p']);
         return Game;
     }());
     Floppy.Game = Game;
@@ -1090,6 +1044,17 @@ var Floppy;
     }());
     Floppy.PipeManager = PipeManager;
 })(Floppy || (Floppy = {}));
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 var Floppy;
 (function (Floppy) {
     var RehaPianoConnectionState;
@@ -1101,14 +1066,12 @@ var Floppy;
     })(RehaPianoConnectionState = Floppy.RehaPianoConnectionState || (Floppy.RehaPianoConnectionState = {}));
     var RehaPianoConnection = (function () {
         function RehaPianoConnection(url) {
-            if (url === void 0) { url = 'ws://localhost:8005'; }
-            this.FINGER_POSITIONS = [0, 1, 2, 3, 4, 12, 11, 10, 9, 8];
-            this.DEFAULT_THRESHOLD = 0.05;
-            this.DEFAULT_MAX_DATA_AGE = 100;
+            if (url === void 0) { url = 'ws://localhost:5555/ws'; }
+            this.DEFAULT_MAX_DATA_AGE = 200;
             this.ws = null;
             this.connectionState = RehaPianoConnectionState.Disconnected;
-            this.latestTimestamp = 0;
-            this.latestChannels = null;
+            this.leftHand = { connected: false, port: null, adc: [0, 0, 0, 0, 0, 0], lastSeen: 0 };
+            this.rightHand = { connected: false, port: null, adc: [0, 0, 0, 0, 0, 0], lastSeen: 0 };
             this.lastDataReceivedTime = 0;
             this.messageCount = 0;
             this.reconnectAttempts = 0;
@@ -1133,15 +1096,23 @@ var Floppy;
             enumerable: false,
             configurable: true
         });
+        Object.defineProperty(RehaPianoConnection.prototype, "leftHandConnected", {
+            get: function () { return this.leftHand.connected; },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RehaPianoConnection.prototype, "rightHandConnected", {
+            get: function () { return this.rightHand.connected; },
+            enumerable: false,
+            configurable: true
+        });
         RehaPianoConnection.prototype.connect = function () {
             return __awaiter(this, void 0, void 0, function () {
                 return __generator(this, function (_a) {
-                    if (this.isConnected) {
+                    if (this.isConnected)
                         return [2];
-                    }
-                    if (this.connectionState === RehaPianoConnectionState.Connecting) {
+                    if (this.connectionState === RehaPianoConnectionState.Connecting)
                         return [2];
-                    }
                     this.connectionState = RehaPianoConnectionState.Connecting;
                     this.reconnectAttempts = 0;
                     return [2, this.attemptConnection()];
@@ -1153,49 +1124,28 @@ var Floppy;
             return new Promise(function (resolve, reject) {
                 try {
                     _this.ws = new WebSocket(_this.url);
-                    _this.ws.binaryType = 'arraybuffer';
                     _this.ws.onopen = function () {
-                        var _a, _b;
                         _this.connectionState = RehaPianoConnectionState.Connected;
                         _this.reconnectAttempts = 0;
                         _this.lastDataReceivedTime = Date.now();
-                        console.log('[RehaPiano] ✅ Connected successfully to', _this.url);
-                        console.log('[RehaPiano] 🔍 WebSocket readyState:', (_a = _this.ws) === null || _a === void 0 ? void 0 : _a.readyState, '(1=OPEN)');
-                        console.log('[RehaPiano] 🔍 WebSocket binaryType:', (_b = _this.ws) === null || _b === void 0 ? void 0 : _b.binaryType);
+                        console.log('[RehaPiano] Connected to', _this.url);
                         resolve();
                     };
                     _this.ws.onmessage = function (event) {
-                        if (_this.lastDataReceivedTime === 0) {
-                            console.log('[RehaPiano] 📨 onmessage triggered! Data type:', typeof event.data, 'is ArrayBuffer:', event.data instanceof ArrayBuffer);
-                            if (event.data instanceof ArrayBuffer) {
-                                console.log('[RehaPiano] 📨 First message received! Size:', event.data.byteLength, 'bytes');
-                            }
-                            else {
-                                console.log('[RehaPiano] 📨 First message data:', event.data);
-                            }
-                        }
-                        if (event.data instanceof ArrayBuffer) {
-                            _this.handleBinaryData(event.data);
-                        }
-                        else {
-                            console.warn('[RehaPiano] ⚠️ Received non-ArrayBuffer data:', typeof event.data, event.data);
+                        if (typeof event.data === 'string') {
+                            _this.handleJsonMessage(event.data);
                         }
                     };
-                    _this.ws.onerror = function (_error) {
+                    _this.ws.onerror = function () {
                         _this.connectionState = RehaPianoConnectionState.Error;
-                        console.error('[RehaPiano] ❌ WebSocket connection error');
                         reject(new Error('WebSocket connection error'));
                     };
                     _this.ws.onclose = function (event) {
                         _this.connectionState = RehaPianoConnectionState.Disconnected;
                         _this.ws = null;
-                        console.warn('[RehaPiano] ⚠️ Connection closed. Code:', event.code, 'Reason:', event.reason);
+                        console.warn('[RehaPiano] Connection closed. Code:', event.code);
                         if (_this.reconnectAttempts < _this.MAX_RECONNECT_ATTEMPTS) {
-                            console.log('[RehaPiano] 🔄 Attempting reconnection...');
                             _this.scheduleReconnect();
-                        }
-                        else {
-                            console.error('[RehaPiano] ❌ Max reconnection attempts reached');
                         }
                     };
                 }
@@ -1207,69 +1157,69 @@ var Floppy;
         };
         RehaPianoConnection.prototype.scheduleReconnect = function () {
             var _this = this;
-            if (this.reconnectTimeout) {
+            if (this.reconnectTimeout)
                 clearTimeout(this.reconnectTimeout);
-            }
             this.reconnectAttempts++;
             var delay = this.RECONNECT_DELAY_BASE * Math.pow(2, this.reconnectAttempts - 1);
             this.reconnectTimeout = setTimeout(function () {
-                _this.attemptConnection().catch(function () {
-                });
+                _this.attemptConnection().catch(function () { });
             }, delay);
         };
-        RehaPianoConnection.prototype.handleBinaryData = function (data) {
-            var isFirstMessage = this.latestChannels === null;
-            if (isFirstMessage) {
-                console.log('[RehaPiano] 🔍 handleBinaryData called! Data size:', data.byteLength);
-            }
-            if (data.byteLength !== 72) {
-                console.warn('[RehaPiano] ⚠️ Invalid data length:', data.byteLength, 'expected 72');
-                return;
-            }
-            if (isFirstMessage) {
-                console.log('[RehaPiano] ✅ Processing first data packet - connection is working!');
-            }
+        RehaPianoConnection.prototype.handleJsonMessage = function (raw) {
             try {
-                var view = new DataView(data);
-                this.latestTimestamp = view.getFloat64(0, true);
-                if (isFirstMessage) {
-                    console.log('[RehaPiano] 🔍 Decoded timestamp:', this.latestTimestamp);
-                }
-                var channels = new Float32Array(16);
-                for (var i = 0; i < 16; i++) {
-                    var offset = 8 + (i * 4);
-                    channels[i] = view.getFloat32(offset, true);
-                }
-                if (isFirstMessage) {
-                    console.log('[RehaPiano] 🔍 Decoded channels:', Array.from(channels).map(function (v, i) { return "[" + i + "]=" + v.toFixed(4); }).join(', '));
-                }
-                this.latestChannels = channels;
-                this.lastDataReceivedTime = Date.now();
-                var avgValue = this.getAverageFingerValue();
-                var maxValue = Math.max.apply(Math, __spreadArray([], __read(Array.from(channels).map(Math.abs)), false));
-                if (isFirstMessage) {
-                    console.log('[RehaPiano] 📊 First packet stats - Avg:', avgValue.toFixed(4), 'Max:', maxValue.toFixed(4), 'Threshold:', this.DEFAULT_THRESHOLD);
-                    console.log('[RehaPiano] ✅ Data processing complete! Connection is fully operational.');
-                    if (maxValue < 0.01) {
-                        console.warn('[RehaPiano] ⚠️ WARNING: All values are zero or very small!');
-                        console.warn('[RehaPiano] 💡 Press keys (q,w,e,r,t,y,u,i,a,s,d,f,g,h,j,k) on the server to generate test data');
-                        console.warn('[RehaPiano] 💡 Or check if keyboard permissions are granted on macOS');
-                    }
-                }
-                this.messageCount++;
-                var shouldLog = isFirstMessage || this.messageCount <= 10 || Math.abs(maxValue) > 0.01 || Math.random() < 0.005;
-                if (shouldLog) {
-                    if (Math.abs(maxValue) > 0.01) {
-                        console.log('[RehaPiano] 📊 Data received - Avg:', avgValue.toFixed(3), 'Max:', maxValue.toFixed(3), 'Channels:', Array.from(channels).map(function (v) { return v.toFixed(2); }).join(', '));
-                    }
-                    else {
-                        console.log('[RehaPiano] 📊 Data received (all zeros) - Press keys on server to test');
-                    }
+                var msg = JSON.parse(raw);
+                switch (msg.kind) {
+                    case 'sample':
+                        this.handleSample(msg);
+                        break;
+                    case 'identifier':
+                        this.handleIdentifier(msg);
+                        break;
+                    case 'device_removed':
+                        this.handleDeviceRemoved(msg);
+                        break;
                 }
             }
-            catch (error) {
-                console.error('[RehaPiano] ❌ Error decoding binary data:', error);
+            catch (e) {
+                console.error('[RehaPiano] Failed to parse message:', e);
             }
+        };
+        RehaPianoConnection.prototype.handleSample = function (msg) {
+            var hand = this.getHandState(msg.hand);
+            if (!hand)
+                return;
+            hand.adc = msg.adc || [0, 0, 0, 0, 0, 0];
+            hand.lastSeen = Date.now();
+            hand.connected = true;
+            this.lastDataReceivedTime = Date.now();
+            this.messageCount++;
+            if (this.messageCount === 1) {
+                console.log('[RehaPiano] First sample from', msg.hand, 'hand — ADC:', hand.adc);
+            }
+        };
+        RehaPianoConnection.prototype.handleIdentifier = function (msg) {
+            var hand = this.getHandState(msg.hand);
+            if (!hand)
+                return;
+            hand.port = msg.port || null;
+            hand.connected = true;
+            console.log('[RehaPiano] Identified:', msg.hand, 'port:', msg.port, 'uid:', msg.uid_hex);
+        };
+        RehaPianoConnection.prototype.handleDeviceRemoved = function (msg) {
+            var hand = this.getHandState(msg.hand);
+            if (!hand)
+                return;
+            hand.connected = false;
+            hand.port = null;
+            hand.adc = [0, 0, 0, 0, 0, 0];
+            console.log('[RehaPiano] Removed:', msg.hand);
+        };
+        RehaPianoConnection.prototype.getHandState = function (hand) {
+            if (hand === 'left')
+                return this.leftHand;
+            if (hand === 'right')
+                return this.rightHand;
+            return null;
         };
         RehaPianoConnection.prototype.disconnect = function () {
             if (this.reconnectTimeout) {
@@ -1282,73 +1232,97 @@ var Floppy;
                 this.ws = null;
             }
             this.connectionState = RehaPianoConnectionState.Disconnected;
-            this.latestChannels = null;
-            this.latestTimestamp = 0;
-        };
-        RehaPianoConnection.prototype.getRawSensorValues = function () {
-            return this.latestChannels;
-        };
-        RehaPianoConnection.prototype.getFingerPressure = function (fingerIndex) {
-            if (fingerIndex < 0 || fingerIndex >= this.FINGER_POSITIONS.length) {
-                return 0;
-            }
-            if (!this.latestChannels) {
-                return 0;
-            }
-            var channelIndex = this.FINGER_POSITIONS[fingerIndex];
-            var value = this.latestChannels[channelIndex];
-            return Math.abs(value);
         };
         RehaPianoConnection.prototype.getAverageFingerValue = function () {
-            if (!this.latestChannels) {
-                return 0;
-            }
+            var e_1, _a, e_2, _b;
             var sum = 0;
-            var activeCount = 0;
-            var fingerValues = [];
-            for (var i = 0; i < this.FINGER_POSITIONS.length; i++) {
-                var channelIndex = this.FINGER_POSITIONS[i];
-                var value = this.latestChannels[channelIndex];
-                fingerValues.push(value);
-                sum += value;
-                if (Math.abs(value) > 0.001) {
-                    activeCount++;
+            var count = 0;
+            try {
+                for (var _c = __values([this.leftHand, this.rightHand]), _d = _c.next(); !_d.done; _d = _c.next()) {
+                    var hand = _d.value;
+                    if (!hand.connected)
+                        continue;
+                    try {
+                        for (var _e = (e_2 = void 0, __values(RehaPianoConnection.FINGER_ADC_INDICES)), _f = _e.next(); !_f.done; _f = _e.next()) {
+                            var idx = _f.value;
+                            sum += hand.adc[idx] || 0;
+                            count++;
+                        }
+                    }
+                    catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                    finally {
+                        try {
+                            if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                        }
+                        finally { if (e_2) throw e_2.error; }
+                    }
                 }
             }
-            var average = sum / this.FINGER_POSITIONS.length;
-            if (this.messageCount <= 20 || Math.abs(average) > 0.01 || Math.random() < 0.02) {
-                var maxValue = Math.max.apply(Math, __spreadArray([], __read(fingerValues.map(Math.abs)), false));
-                if (maxValue > 0.01 || this.messageCount <= 20) {
-                    console.log('[RehaPiano] 🎯 Average:', average.toFixed(4), 'Max:', maxValue.toFixed(4), 'Active:', activeCount, 'Values:', fingerValues.map(function (v) { return v.toFixed(2); }).join(','));
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
+                finally { if (e_1) throw e_1.error; }
             }
-            return average;
+            if (count === 0)
+                return 0;
+            return sum / count;
+        };
+        RehaPianoConnection.prototype.getFingerPressure = function (hand, fingerIndex) {
+            var state = hand === 'left' ? this.leftHand : this.rightHand;
+            if (!state.connected)
+                return 0;
+            var adcIndex = fingerIndex + 1;
+            return Math.abs(state.adc[adcIndex] || 0);
+        };
+        RehaPianoConnection.prototype.getHandAdc = function (hand) {
+            var state = hand === 'left' ? this.leftHand : this.rightHand;
+            return __spreadArray([], __read(state.adc), false);
         };
         RehaPianoConnection.prototype.isAnyFingerPressed = function (threshold) {
-            if (threshold === void 0) { threshold = this.DEFAULT_THRESHOLD; }
-            if (!this.latestChannels) {
-                return false;
-            }
-            for (var i = 0; i < this.FINGER_POSITIONS.length; i++) {
-                var channelIndex = this.FINGER_POSITIONS[i];
-                var value = Math.abs(this.latestChannels[channelIndex]);
-                if (value >= threshold) {
-                    return true;
+            var e_3, _a, e_4, _b;
+            if (threshold === void 0) { threshold = 10; }
+            try {
+                for (var _c = __values([this.leftHand, this.rightHand]), _d = _c.next(); !_d.done; _d = _c.next()) {
+                    var hand = _d.value;
+                    if (!hand.connected)
+                        continue;
+                    try {
+                        for (var _e = (e_4 = void 0, __values(RehaPianoConnection.FINGER_ADC_INDICES)), _f = _e.next(); !_f.done; _f = _e.next()) {
+                            var idx = _f.value;
+                            if (Math.abs(hand.adc[idx] || 0) >= threshold)
+                                return true;
+                        }
+                    }
+                    catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                    finally {
+                        try {
+                            if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                        }
+                        finally { if (e_4) throw e_4.error; }
+                    }
                 }
+            }
+            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            finally {
+                try {
+                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                }
+                finally { if (e_3) throw e_3.error; }
             }
             return false;
         };
-        RehaPianoConnection.prototype.getLatestTimestamp = function () {
-            return this.latestTimestamp;
-        };
         RehaPianoConnection.prototype.isDataFresh = function (maxAge) {
             if (maxAge === void 0) { maxAge = this.DEFAULT_MAX_DATA_AGE; }
-            if (!this.latestChannels) {
+            if (this.lastDataReceivedTime === 0)
                 return false;
-            }
-            var age = Date.now() - this.lastDataReceivedTime;
-            return age <= maxAge;
+            return (Date.now() - this.lastDataReceivedTime) <= maxAge;
         };
+        RehaPianoConnection.prototype.hasAnyHand = function () {
+            return this.leftHand.connected || this.rightHand.connected;
+        };
+        RehaPianoConnection.FINGER_ADC_INDICES = [1, 2, 3, 4, 5];
         return RehaPianoConnection;
     }());
     Floppy.RehaPianoConnection = RehaPianoConnection;
@@ -1378,9 +1352,9 @@ function getUrlParamNumber(name, defaultValue) {
     if (bird == null || flightArea == null || land == null || replayButton == null || bigScore == null || currentScore == null || highScore == null) {
         throw new Error('Missing an element');
     }
-    var rehaPianoUrl = getUrlParam('rpUrl') || 'ws://localhost:8005';
-    var rehaPianoThreshold = getUrlParamNumber('rpThreshold', 0.01);
-    var rehaPianoScale = getUrlParamNumber('rpScale', 4.0);
+    var rehaPianoUrl = getUrlParam('rpUrl') || 'ws://localhost:5555/ws';
+    var rehaPianoThreshold = getUrlParamNumber('rpThreshold', 5.0);
+    var rehaPianoScale = getUrlParamNumber('rpScale', 0.01);
     var rehaPianoEnabled = getUrlParam('rpDisabled') === undefined;
     var game = new Floppy.Game({ bird: bird, land: land, flightArea: flightArea, replayButton: replayButton, bigScore: bigScore, currentScore: currentScore, highScore: highScore }, {
         isDebugOn: isDebugOn,

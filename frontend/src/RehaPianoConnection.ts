@@ -6,28 +6,35 @@ namespace Floppy {
         Error = 'error'
     }
 
+    interface HandState {
+        connected: boolean;
+        port: string | null;
+        adc: number[];  // 6 channels: [dummy, little, ring, middle, index, thumb]
+        lastSeen: number;
+    }
+
     export class RehaPianoConnection {
-        protected readonly FINGER_POSITIONS: readonly number[] = [0, 1, 2, 3, 4, 12, 11, 10, 9, 8];
-        protected readonly DEFAULT_THRESHOLD = 0.05;
-        protected readonly DEFAULT_MAX_DATA_AGE = 100; // milliseconds
+        // Finger ADC indices within the adc array (1-5, index 0 is dummy)
+        protected static readonly FINGER_ADC_INDICES = [1, 2, 3, 4, 5];
+        protected readonly DEFAULT_MAX_DATA_AGE = 200; // ms
 
         protected ws: WebSocket | null = null;
         protected connectionState: RehaPianoConnectionState = RehaPianoConnectionState.Disconnected;
         protected url: string;
-        
-        // Latest decoded data
-        protected latestTimestamp: number = 0;
-        protected latestChannels: Float32Array | null = null;
+
+        // Per-hand state tracking
+        protected leftHand: HandState = { connected: false, port: null, adc: [0, 0, 0, 0, 0, 0], lastSeen: 0 };
+        protected rightHand: HandState = { connected: false, port: null, adc: [0, 0, 0, 0, 0, 0], lastSeen: 0 };
         protected lastDataReceivedTime: number = 0;
         protected messageCount: number = 0;
 
-        // Reconnection settings
+        // Reconnection
         protected reconnectAttempts: number = 0;
         protected readonly MAX_RECONNECT_ATTEMPTS = 5;
-        protected readonly RECONNECT_DELAY_BASE = 1000; // 1 second base delay
+        protected readonly RECONNECT_DELAY_BASE = 1000;
         protected reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
-        constructor(url: string = 'ws://localhost:8005') {
+        constructor(url: string = 'ws://localhost:5555/ws') {
             this.url = url;
         }
 
@@ -41,18 +48,14 @@ namespace Floppy {
             return this.connectionState;
         }
 
+        public get leftHandConnected(): boolean { return this.leftHand.connected; }
+        public get rightHandConnected(): boolean { return this.rightHand.connected; }
+
         public async connect(): Promise<void> {
-            if (this.isConnected) {
-                return; // Already connected
-            }
-
-            if (this.connectionState === RehaPianoConnectionState.Connecting) {
-                return; // Already connecting
-            }
-
+            if (this.isConnected) return;
+            if (this.connectionState === RehaPianoConnectionState.Connecting) return;
             this.connectionState = RehaPianoConnectionState.Connecting;
             this.reconnectAttempts = 0;
-
             return this.attemptConnection();
         }
 
@@ -60,53 +63,32 @@ namespace Floppy {
             return new Promise((resolve, reject) => {
                 try {
                     this.ws = new WebSocket(this.url);
-                    this.ws.binaryType = 'arraybuffer';
 
                     this.ws.onopen = () => {
                         this.connectionState = RehaPianoConnectionState.Connected;
                         this.reconnectAttempts = 0;
                         this.lastDataReceivedTime = Date.now();
-                        console.log('[RehaPiano] ✅ Connected successfully to', this.url);
-                        console.log('[RehaPiano] 🔍 WebSocket readyState:', this.ws?.readyState, '(1=OPEN)');
-                        console.log('[RehaPiano] 🔍 WebSocket binaryType:', this.ws?.binaryType);
+                        console.log('[RehaPiano] Connected to', this.url);
                         resolve();
                     };
 
                     this.ws.onmessage = (event: MessageEvent) => {
-                        // Debug: Always log first message
-                        if (this.lastDataReceivedTime === 0) {
-                            console.log('[RehaPiano] 📨 onmessage triggered! Data type:', typeof event.data, 'is ArrayBuffer:', event.data instanceof ArrayBuffer);
-                            if (event.data instanceof ArrayBuffer) {
-                                console.log('[RehaPiano] 📨 First message received! Size:', event.data.byteLength, 'bytes');
-                            } else {
-                                console.log('[RehaPiano] 📨 First message data:', event.data);
-                            }
-                        }
-                        
-                        if (event.data instanceof ArrayBuffer) {
-                            this.handleBinaryData(event.data);
-                        } else {
-                            console.warn('[RehaPiano] ⚠️ Received non-ArrayBuffer data:', typeof event.data, event.data);
+                        if (typeof event.data === 'string') {
+                            this.handleJsonMessage(event.data);
                         }
                     };
 
-                    this.ws.onerror = (_error: Event) => {
+                    this.ws.onerror = () => {
                         this.connectionState = RehaPianoConnectionState.Error;
-                        console.error('[RehaPiano] ❌ WebSocket connection error');
                         reject(new Error('WebSocket connection error'));
                     };
 
                     this.ws.onclose = (event: CloseEvent) => {
                         this.connectionState = RehaPianoConnectionState.Disconnected;
                         this.ws = null;
-                        console.warn('[RehaPiano] ⚠️ Connection closed. Code:', event.code, 'Reason:', event.reason);
-                        
-                        // Attempt reconnection if not manually disconnected
+                        console.warn('[RehaPiano] Connection closed. Code:', event.code);
                         if (this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS) {
-                            console.log('[RehaPiano] 🔄 Attempting reconnection...');
                             this.scheduleReconnect();
-                        } else {
-                            console.error('[RehaPiano] ❌ Max reconnection attempts reached');
                         }
                     };
                 } catch (error) {
@@ -117,195 +99,139 @@ namespace Floppy {
         }
 
         protected scheduleReconnect(): void {
-            if (this.reconnectTimeout) {
-                clearTimeout(this.reconnectTimeout);
-            }
-
+            if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
             this.reconnectAttempts++;
-            const delay = this.RECONNECT_DELAY_BASE * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
-
+            const delay = this.RECONNECT_DELAY_BASE * Math.pow(2, this.reconnectAttempts - 1);
             this.reconnectTimeout = setTimeout(() => {
-                this.attemptConnection().catch(() => {
-                    // Reconnection failed, will try again if under max attempts
-                });
+                this.attemptConnection().catch(() => {});
             }, delay);
         }
 
-        protected handleBinaryData(data: ArrayBuffer): void {
-            // Always log the first few messages for debugging
-            const isFirstMessage = this.latestChannels === null;
-            
-            if (isFirstMessage) {
-                console.log('[RehaPiano] 🔍 handleBinaryData called! Data size:', data.byteLength);
-            }
-            
-            if (data.byteLength !== 72) {
-                // Expected: 8 bytes timestamp + 64 bytes (16 channels × 4 bytes)
-                console.warn('[RehaPiano] ⚠️ Invalid data length:', data.byteLength, 'expected 72');
-                return;
-            }
-            
-            if (isFirstMessage) {
-                console.log('[RehaPiano] ✅ Processing first data packet - connection is working!');
-            }
-
+        protected handleJsonMessage(raw: string): void {
             try {
-                const view = new DataView(data);
-                
-                // Decode timestamp (8 bytes, double, little-endian)
-                this.latestTimestamp = view.getFloat64(0, true);
-                
-                if (isFirstMessage) {
-                    console.log('[RehaPiano] 🔍 Decoded timestamp:', this.latestTimestamp);
+                const msg = JSON.parse(raw);
+                switch (msg.kind) {
+                    case 'sample':
+                        this.handleSample(msg);
+                        break;
+                    case 'identifier':
+                        this.handleIdentifier(msg);
+                        break;
+                    case 'device_removed':
+                        this.handleDeviceRemoved(msg);
+                        break;
+                    // snapshot, heartbeat, haptic, calibration, reboot — ignored
                 }
-                
-                // Decode channels (16 channels × 4 bytes each, float, little-endian)
-                const channels = new Float32Array(16);
-                for (let i = 0; i < 16; i++) {
-                    const offset = 8 + (i * 4);
-                    channels[i] = view.getFloat32(offset, true);
-                }
-                
-                if (isFirstMessage) {
-                    console.log('[RehaPiano] 🔍 Decoded channels:', Array.from(channels).map((v, i) => `[${i}]=${v.toFixed(4)}`).join(', '));
-                }
-                
-                this.latestChannels = channels;
-                this.lastDataReceivedTime = Date.now();
-                
-                // Debug logging (only log occasionally and when there's activity)
-                const avgValue = this.getAverageFingerValue();
-                const maxValue = Math.max(...Array.from(channels).map(Math.abs));
-                
-                if (isFirstMessage) {
-                    console.log('[RehaPiano] 📊 First packet stats - Avg:', avgValue.toFixed(4), 'Max:', maxValue.toFixed(4), 'Threshold:', this.DEFAULT_THRESHOLD);
-                    console.log('[RehaPiano] ✅ Data processing complete! Connection is fully operational.');
-                    
-                    // Always log first few messages to debug
-                    if (maxValue < 0.01) {
-                        console.warn('[RehaPiano] ⚠️ WARNING: All values are zero or very small!');
-                        console.warn('[RehaPiano] 💡 Press keys (q,w,e,r,t,y,u,i,a,s,d,f,g,h,j,k) on the server to generate test data');
-                        console.warn('[RehaPiano] 💡 Or check if keyboard permissions are granted on macOS');
-                    }
-                }
-                
-                // Log first 10 messages always, then occasionally
-                this.messageCount++;
-                const shouldLog = isFirstMessage || this.messageCount <= 10 || Math.abs(maxValue) > 0.01 || Math.random() < 0.005;
-                
-                if (shouldLog) {
-                    if (Math.abs(maxValue) > 0.01) {
-                        console.log('[RehaPiano] 📊 Data received - Avg:', avgValue.toFixed(3), 'Max:', maxValue.toFixed(3), 'Channels:', Array.from(channels).map(v => v.toFixed(2)).join(', '));
-                    } else {
-                        console.log('[RehaPiano] 📊 Data received (all zeros) - Press keys on server to test');
-                    }
-                }
-            } catch (error) {
-                console.error('[RehaPiano] ❌ Error decoding binary data:', error);
+            } catch (e) {
+                console.error('[RehaPiano] Failed to parse message:', e);
             }
         }
 
+        protected handleSample(msg: any): void {
+            const hand = this.getHandState(msg.hand);
+            if (!hand) return;
+
+            hand.adc = msg.adc || [0, 0, 0, 0, 0, 0];
+            hand.lastSeen = Date.now();
+            hand.connected = true;
+            this.lastDataReceivedTime = Date.now();
+            this.messageCount++;
+
+            if (this.messageCount === 1) {
+                console.log('[RehaPiano] First sample from', msg.hand, 'hand — ADC:', hand.adc);
+            }
+        }
+
+        protected handleIdentifier(msg: any): void {
+            const hand = this.getHandState(msg.hand);
+            if (!hand) return;
+            hand.port = msg.port || null;
+            hand.connected = true;
+            console.log('[RehaPiano] Identified:', msg.hand, 'port:', msg.port, 'uid:', msg.uid_hex);
+        }
+
+        protected handleDeviceRemoved(msg: any): void {
+            const hand = this.getHandState(msg.hand);
+            if (!hand) return;
+            hand.connected = false;
+            hand.port = null;
+            hand.adc = [0, 0, 0, 0, 0, 0];
+            console.log('[RehaPiano] Removed:', msg.hand);
+        }
+
+        protected getHandState(hand: string): HandState | null {
+            if (hand === 'left') return this.leftHand;
+            if (hand === 'right') return this.rightHand;
+            return null;
+        }
+
         public disconnect(): void {
-            // Cancel any pending reconnection
             if (this.reconnectTimeout) {
                 clearTimeout(this.reconnectTimeout);
                 this.reconnectTimeout = null;
             }
-
-            // Reset reconnection attempts to prevent auto-reconnect
             this.reconnectAttempts = this.MAX_RECONNECT_ATTEMPTS;
-
             if (this.ws) {
                 this.ws.close();
                 this.ws = null;
             }
-
             this.connectionState = RehaPianoConnectionState.Disconnected;
-            this.latestChannels = null;
-            this.latestTimestamp = 0;
         }
 
-        public getRawSensorValues(): Float32Array | null {
-            return this.latestChannels;
-        }
-
-        public getFingerPressure(fingerIndex: number): number {
-            if (fingerIndex < 0 || fingerIndex >= this.FINGER_POSITIONS.length) {
-                return 0;
-            }
-
-            if (!this.latestChannels) {
-                return 0;
-            }
-
-            const channelIndex = this.FINGER_POSITIONS[fingerIndex];
-            const value = this.latestChannels[channelIndex];
-            
-            // Return absolute pressure value
-            return Math.abs(value);
-        }
-
+        /**
+         * Average finger force across all connected hands.
+         * ADC values are normalized (raw / 128), typical range 0-400.
+         * Returns the average across all 10 fingers (5 per hand).
+         */
         public getAverageFingerValue(): number {
-            if (!this.latestChannels) {
-                return 0;
-            }
-
             let sum = 0;
-            let activeCount = 0;
-            const fingerValues: number[] = [];
-            
-            for (let i = 0; i < this.FINGER_POSITIONS.length; i++) {
-                const channelIndex = this.FINGER_POSITIONS[i];
-                const value = this.latestChannels[channelIndex];
-                fingerValues.push(value);
-                sum += value;
-                if (Math.abs(value) > 0.001) {
-                    activeCount++;
+            let count = 0;
+            for (const hand of [this.leftHand, this.rightHand]) {
+                if (!hand.connected) continue;
+                for (const idx of RehaPianoConnection.FINGER_ADC_INDICES) {
+                    sum += hand.adc[idx] || 0;
+                    count++;
                 }
             }
-
-            // Return average with sign preserved (negative = extension, positive = compression)
-            const average = sum / this.FINGER_POSITIONS.length;
-            
-            // Log more frequently to debug
-            if (this.messageCount <= 20 || Math.abs(average) > 0.01 || Math.random() < 0.02) {
-                const maxValue = Math.max(...fingerValues.map(Math.abs));
-                if (maxValue > 0.01 || this.messageCount <= 20) {
-                    console.log('[RehaPiano] 🎯 Average:', average.toFixed(4), 'Max:', maxValue.toFixed(4), 'Active:', activeCount, 'Values:', fingerValues.map(v => v.toFixed(2)).join(','));
-                }
-            }
-            
-            return average;
+            if (count === 0) return 0;
+            return sum / count;
         }
 
-        public isAnyFingerPressed(threshold: number = this.DEFAULT_THRESHOLD): boolean {
-            if (!this.latestChannels) {
-                return false;
-            }
+        /**
+         * Get finger pressure for a specific hand.
+         * fingerIndex: 0=little, 1=ring, 2=middle, 3=index, 4=thumb
+         */
+        public getFingerPressure(hand: 'left' | 'right', fingerIndex: number): number {
+            const state = hand === 'left' ? this.leftHand : this.rightHand;
+            if (!state.connected) return 0;
+            const adcIndex = fingerIndex + 1; // ADC index 0 is dummy
+            return Math.abs(state.adc[adcIndex] || 0);
+        }
 
-            for (let i = 0; i < this.FINGER_POSITIONS.length; i++) {
-                const channelIndex = this.FINGER_POSITIONS[i];
-                const value = Math.abs(this.latestChannels[channelIndex]);
-                if (value >= threshold) {
-                    return true;
+        /** Get raw ADC array for a hand (6 values: [dummy, little, ring, middle, index, thumb]). */
+        public getHandAdc(hand: 'left' | 'right'): number[] {
+            const state = hand === 'left' ? this.leftHand : this.rightHand;
+            return [...state.adc];
+        }
+
+        /** Check if any finger exceeds the given threshold (in normalized ADC units). */
+        public isAnyFingerPressed(threshold: number = 10): boolean {
+            for (const hand of [this.leftHand, this.rightHand]) {
+                if (!hand.connected) continue;
+                for (const idx of RehaPianoConnection.FINGER_ADC_INDICES) {
+                    if (Math.abs(hand.adc[idx] || 0) >= threshold) return true;
                 }
             }
-
             return false;
         }
 
-        public getLatestTimestamp(): number {
-            return this.latestTimestamp;
+        public isDataFresh(maxAge: number = this.DEFAULT_MAX_DATA_AGE): boolean {
+            if (this.lastDataReceivedTime === 0) return false;
+            return (Date.now() - this.lastDataReceivedTime) <= maxAge;
         }
 
-        public isDataFresh(maxAge: number = this.DEFAULT_MAX_DATA_AGE): boolean {
-            if (!this.latestChannels) {
-                return false;
-            }
-
-            const age = Date.now() - this.lastDataReceivedTime;
-            return age <= maxAge;
+        public hasAnyHand(): boolean {
+            return this.leftHand.connected || this.rightHand.connected;
         }
     }
 }
-

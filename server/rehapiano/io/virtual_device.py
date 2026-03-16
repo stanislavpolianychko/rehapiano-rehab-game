@@ -25,8 +25,10 @@ VIRTUAL_FW = 231  # Same as real devices
 
 # Keyboard mapping (key -> finger index 0-4)
 # Finger order: 0=little, 1=ring, 2=middle, 3=index, 4=thumb
+# Lowercase = compression (positive ADC), Uppercase = extension (negative ADC)
 LEFT_KEYS = {'q': 0, 'w': 1, 'e': 2, 'r': 3, 't': 4}
 RIGHT_KEYS = {'y': 0, 'u': 1, 'i': 2, 'o': 3, 'p': 4}
+ALL_FINGER_KEYS = {**LEFT_KEYS, **RIGHT_KEYS}
 
 # ADC waveform parameters
 MAX_ADC_VALUE = 400.0  # Maximum normalized ADC value (after /128)
@@ -47,6 +49,7 @@ class FingerState:
     release_time: float = 0.0
     current_value: float = 0.0
     target_value: float = 0.0
+    direction: int = 1  # +1 = compression, -1 = extension
 
     # Per-finger randomization for more realistic feel
     peak_value: float = field(default_factory=lambda: MAX_ADC_VALUE * random.uniform(0.8, 1.0))
@@ -109,8 +112,8 @@ class VirtualHandDevice:
             self._task = None
         print(f"[VIRTUAL] Stopped {self.hand} hand device: {self.port}")
 
-    def key_down(self, key: str):
-        """Handle key press."""
+    def key_down(self, key: str, direction: int = 1):
+        """Handle key press. direction: +1 = compression, -1 = extension."""
         key = key.lower()
         if key in self.key_mapping:
             finger_idx = self.key_mapping[key]
@@ -118,6 +121,7 @@ class VirtualHandDevice:
             if not finger.pressed:
                 finger.pressed = True
                 finger.press_time = time.time()
+                finger.direction = direction
                 # Randomize peak for this press
                 finger.peak_value = MAX_ADC_VALUE * random.uniform(0.75, 1.0)
                 self.pressed_keys.add(key)
@@ -170,9 +174,9 @@ class VirtualHandDevice:
             else:
                 finger.current_value = 0
 
-        # Add noise
+        # Add noise and apply direction (compression = positive, extension = negative)
         noise = random.gauss(0, NOISE_AMPLITUDE if finger.pressed else BASELINE_NOISE)
-        return finger.current_value + noise
+        return finger.direction * finger.current_value + noise
 
     def _generate_imu_data(self) -> Dict[str, float]:
         """Generate simulated IMU data with slight variations."""
@@ -333,16 +337,16 @@ class VirtualDeviceManager:
 
         print("[VIRTUAL] Virtual mode disabled")
 
-    def key_down(self, key: str):
-        """Handle key down event."""
+    def key_down(self, key: str, direction: int = 1):
+        """Handle key down event. direction: +1 = compression, -1 = extension."""
         if not self._enabled:
             return
 
-        key = key.lower()
-        if key in LEFT_KEYS and self._left_device:
-            self._left_device.key_down(key)
-        elif key in RIGHT_KEYS and self._right_device:
-            self._right_device.key_down(key)
+        key_lower = key.lower()
+        if key_lower in LEFT_KEYS and self._left_device:
+            self._left_device.key_down(key_lower, direction)
+        elif key_lower in RIGHT_KEYS and self._right_device:
+            self._right_device.key_down(key_lower, direction)
 
     def key_up(self, key: str):
         """Handle key up event."""

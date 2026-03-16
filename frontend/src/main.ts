@@ -45,10 +45,10 @@ function getUrlParamNumber(name: string, defaultValue: number): number {
     }
 
     // RehaPiano configuration from URL parameters
-    const rehaPianoUrl = getUrlParam('rpUrl') || 'ws://localhost:8005';
-    const rehaPianoThreshold = getUrlParamNumber('rpThreshold', 0.01); // Lower threshold for more sensitivity
-    const rehaPianoScale = getUrlParamNumber('rpScale', 4.0); // Higher scale for more responsiveness
-    const rehaPianoEnabled = getUrlParam('rpDisabled') === undefined; // Enabled by default, disabled if rpDisabled param exists
+    const rehaPianoUrl = getUrlParam('rpUrl') || 'ws://localhost:5555/ws';
+    const rehaPianoThreshold = getUrlParamNumber('rpThreshold', 5.0);  // min avg force (normalized ADC units)
+    const rehaPianoScale = getUrlParamNumber('rpScale', 0.01);         // force-to-velocity multiplier
+    const rehaPianoEnabled = getUrlParam('rpDisabled') === undefined;
 
     const game = new Floppy.Game(
         { bird, land, flightArea, replayButton, bigScore, currentScore, highScore },
