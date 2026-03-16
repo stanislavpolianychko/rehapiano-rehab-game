@@ -1,0 +1,216 @@
+/* --- Vars & base --- */
+:root{
+  --bg:#f8fafc; --card:#fff; --ink:#0f172a; --muted:#475569; --line:#e2e8f0;
+  --ok:#16a34a; --bad:#dc2626; --round:16px;
+  --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; padding:20px; background:var(--bg); color:var(--ink);
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto;
+}
+
+/* --- Header --- */
+header{display:flex;gap:12px;align-items:center;margin-bottom:16px}
+.spacer{flex:1}
+.ws{
+  font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line);
+}
+.ws.ok{color:var(--ok);border-color:#bbf7d0}
+.ws.bad{color:var(--bad);border-color:#fecaca}
+
+/* --- Layout --- */
+.grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--round);
+  box-shadow:0 1px 2px rgba(0,0,0,.03);
+}
+.card h3{margin:0;padding:12px 14px;border-bottom:1px solid var(--line);font-size:15px}
+
+/* --- Devices list --- */
+#devices{list-style:none;margin:0;padding:8px;max-height:70vh;overflow:auto}
+.dev{
+  border:2px solid var(--line); border-radius:12px; padding:10px; margin:8px; background:#fff;
+  cursor:pointer; transition:border-color .15s, box-shadow .15s;
+}
+.dev .top{display:flex;justify-content:space-between;align-items:center}
+.dev .port{font-weight:600}
+.dev .badge{font-size:12px;color:var(--muted)}
+.dev .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;margin-top:8px;font-size:13px}
+.dev .kv .key{color:var(--muted)}
+.dev.online{border-color:#c7f9cc}
+.dev.offline{border-color:#fecaca}
+.dev.active{box-shadow:0 0 0 3px rgba(59,130,246,.2)}
+
+/* --- Actions --- */
+.actions{display:flex;gap:8px;margin-top:10px}
+.btn{
+  appearance:none; border:1px solid var(--line); background:#fff; border-radius:10px;
+  padding:6px 10px; font-size:13px; cursor:pointer;
+}
+.btn:hover{background:#f1f5f9}
+.btn.ghost{background:transparent}
+.btn.danger{border-color:#fecaca}
+.btn.success{border-color:#bbf7d0}
+
+/* --- Log --- */
+#log{
+  padding:10px 12px; font-family:var(--mono); font-size:12px;
+  max-height:70vh; overflow:auto; white-space:pre-wrap;
+}
+
+/* --- Freeze toggle --- */
+.toggle{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--line);background:#fff;
+  border-radius:10px;padding:6px 12px;font-size:13px;
+  cursor:pointer;user-select:none;
+}
+.toggle:hover{background:#f1f5f9}
+.toggle .label-on{display:none}
+.toggle[aria-pressed="true"]{border-color:#bbf7d0;background:#ecfdf5}
+.toggle[aria-pressed="true"] .label-off{display:none}
+.toggle[aria-pressed="true"] .label-on{display:inline}
+.is-frozen .dev{opacity:.85}
+
+/* --- uPlot host bloky --- */
+.chart{ width:100%; min-height:260px; }
+.u-legend { font-size: 12px; }
+
+/* --- Motor panel --- */
+.motor-panel{
+  display:grid; gap:12px; grid-template-columns: repeat(5, 1fr); padding:12px;
+}
+@media (max-width:1200px){ .motor-panel{ grid-template-columns: repeat(3, 1fr); } }
+@media (max-width:800px){ .motor-panel{ grid-template-columns: 1fr; } }
+
+.finger-group{
+  border:1px dashed var(--line); border-radius:12px; padding:10px; background:#fff;
+  display:flex; flex-direction:column; gap:8px;
+}
+.finger-group label{ font-size:13px; color:var(--muted); }
+
+.finger-group input[type="range"]{
+  width:100%; appearance:none; height:6px; border-radius:999px; background:#e2e8f0; outline:none;
+}
+.finger-group input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px;height:16px;border-radius:50%;
+  background:#0ea5e9;border:2px solid white;box-shadow:0 1px 2px rgba(0,0,0,.15); cursor:pointer;
+}
+.finger-group input[type="range"]::-moz-range-thumb{
+  width:16px;height:16px;border:none;border-radius:50%; background:#0ea5e9; cursor:pointer;
+}
+
+.range-labels{ display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin:2px 0 8px 0; }
+
+.finger-group .actions{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:6px; }
+.valchip { display:inline-block; padding:2px 8px; font-size:12px; border:1px solid var(--line); border-radius:999px; background:#f8fafc; color:var(--muted); }
+
+.btn.primary{ border-color:#bfdbfe; background:#eff6ff; }
+.btn.primary:hover{ background:#dbeafe; }
+
+h4{ margin:0; }
+
+/* Odoslať na všetky prsty */
+#btnSendAll {
+  background:#3b82f6; color:#fff; border:1px solid #3b82f6;
+  border-radius:10px; padding:8px 14px; font-size:14px; cursor:pointer;
+  transition:background .15s, box-shadow .15s;
+}
+#btnSendAll:hover { background:#2563eb; box-shadow:0 2px 4px rgba(0,0,0,.1); }
+#btnSendAll:disabled { background:#93c5fd; border-color:#93c5fd; cursor:not-allowed; }
+.sendall-wrap { display:flex; justify-content:flex-end; margin-top:16px; margin-bottom:24px; }
+
+/* --- Virtual Mode --- */
+.toggle.virtual[aria-pressed="true"] {
+  border-color: #a78bfa;
+  background: #f5f3ff;
+}
+.toggle.virtual[aria-pressed="true"] .label-off { display: none; }
+.toggle.virtual[aria-pressed="true"] .label-on { display: inline; color: #7c3aed; font-weight: 600; }
+
+/* Virtual keyboard guide */
+.virtual-guide {
+  margin-bottom: 16px;
+  padding: 16px;
+}
+.virtual-guide h3 {
+  color: #7c3aed;
+  border-bottom: 2px solid #a78bfa;
+}
+.virtual-hands {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  padding: 16px;
+}
+.virtual-hand {
+  text-align: center;
+}
+.virtual-hand h4 {
+  margin-bottom: 12px;
+  color: var(--muted);
+}
+.virtual-hand .keys {
+  display: flex;
+  gap: 8px;
+}
+.virtual-hand .key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  transition: all 0.1s;
+  user-select: none;
+}
+.virtual-hand .key small {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.virtual-hand.left .key.pressed {
+  background: #bbf7d0;
+  border-color: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  transform: scale(0.95);
+}
+.virtual-hand.right .key.pressed {
+  background: #fef08a;
+  border-color: #eab308;
+  box-shadow: 0 0 8px rgba(234, 179, 8, 0.4);
+  transform: scale(0.95);
+}
+
+/* Virtual device indicators in device list */
+.dev[data-port^="/virtual"] {
+  border-style: dashed;
+  background: linear-gradient(135deg, #faf5ff 0%, #fff 100%);
+}
+.dev[data-port^="/virtual"] .port::before {
+  content: "V ";
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .virtual-hands {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .virtual-hand .key {
+    width: 48px;
+    height: 48px;
+    font-size: 14px;
+  }
+}

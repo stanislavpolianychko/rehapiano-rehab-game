@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balance Trainer - RehaPiano</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a1a;
+            --bg-secondary: #12122a;
+            --bg-card: #1a1a3a;
+            --accent-left: #3b82f6;
+            --accent-right: #ef4444;
+            --accent-balanced: #22c55e;
+            --accent-warning: #f59e0b;
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --success: #22c55e;
+            --gold: #fbbf24;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 15px 0;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(90deg, var(--accent-left), var(--accent-right));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 10px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Debug panel */
+        .debug-panel {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .debug-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 40px;
+        }
+
+        .debug-hand {
+            flex: 1;
+        }
+
+        .debug-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--gold);
+        }
+
+        .debug-value {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .debug-label {
+            color: var(--text-secondary);
+        }
+
+        .debug-num {
+            font-weight: bold;
+        }
+
+        .debug-num.positive { color: var(--success); }
+        .debug-num.negative { color: var(--accent-right); }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Phase: Instructions */
+        .phase-instructions {
+            text-align: center;
+            max-width: 800px;
+        }
+
+        .phase-instructions h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: var(--gold);
+        }
+
+        .instructions-text {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .finger-display {
+            font-size: 1.5rem;
+            color: var(--accent-balanced);
+            margin: 20px 0;
+            padding: 15px 30px;
+            background: var(--bg-card);
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        .hands-preview {
+            display: flex;
+            justify-content: center;
+            gap: 100px;
+            margin: 30px 0;
+        }
+
+        .hand-icon {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+        }
+
+        .hand-icon.left {
+            background: linear-gradient(135deg, var(--accent-left), #1d4ed8);
+        }
+
+        .hand-icon.right {
+            background: linear-gradient(135deg, var(--accent-right), #b91c1c);
+        }
+
+        .start-btn {
+            padding: 18px 50px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, var(--accent-left), var(--accent-right));
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+        }
+
+        .start-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Phase: Calibration */
+        .phase-calibration {
+            text-align: center;
+        }
+
+        .calibration-spinner {
+            width: 80px;
+            height: 80px;
+            border: 8px solid var(--bg-card);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 30px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .calibration-text {
+            font-size: 1.5rem;
+            color: var(--gold);
+        }
+
+        /* Phase: Countdown */
+        .phase-countdown {
+            text-align: center;
+        }
+
+        .countdown-number {
+            font-size: 12rem;
+            font-weight: bold;
+            background: linear-gradient(180deg, var(--gold), #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: countdownPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes countdownPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .countdown-text {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            margin-top: 20px;
+        }
+
+        /* Phase: Game */
+        .phase-game {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .timer-bar {
+            width: 80%;
+            height: 20px;
+            background: var(--bg-card);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .timer-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-left), var(--accent-right));
+            transition: width 0.1s linear;
+        }
+
+        .timer-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .game-main {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 60px;
+            width: 100%;
+        }
+
+        /* Force display */
+        .force-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .force-bar {
+            width: 100px;
+            height: 250px;
+            background: var(--bg-card);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            border: 3px solid rgba(255,255,255,0.1);
+        }
+
+        .force-fill {
+            position: absolute;
+            bottom: 50%;
+            width: 100%;
+            transition: height 0.1s ease-out, bottom 0.1s ease-out;
+            border-radius: 0;
+        }
+
+        .force-fill.positive {
+            bottom: 50%;
+        }
+
+        .force-fill.negative {
+            top: 50%;
+            bottom: auto;
+        }
+
+        .force-fill.left {
+            background: linear-gradient(180deg, var(--accent-left), #1d4ed8);
+        }
+
+        .force-fill.right {
+            background: linear-gradient(180deg, var(--accent-right), #b91c1c);
+        }
+
+        .force-zero-line {
+            position: absolute;
+            top: 50%;
+            width: 100%;
+            height: 2px;
+            background: rgba(255,255,255,0.5);
+        }
+
+        .force-label {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .force-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .force-raw {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        /* Balance indicator in middle */
+        .balance-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .balance-meter {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 4px solid rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .balance-meter-fill {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 180px;
+            height: 180px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .balance-meter-fill.balanced {
+            background: radial-gradient(circle, var(--accent-balanced), transparent 70%);
+        }
+
+        .balance-meter-fill.unbalanced {
+            background: radial-gradient(circle, var(--accent-warning), transparent 70%);
+        }
+
+        .balance-needle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 80px;
+            background: white;
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(0deg);
+            transition: transform 0.1s ease-out;
+            border-radius: 2px;
+        }
+
+        .balance-center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .balance-indicator {
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .balance-indicator.balanced {
+            background: var(--accent-balanced);
+            color: white;
+        }
+
+        .balance-indicator.unbalanced {
+            background: var(--accent-warning);
+            color: black;
+        }
+
+        .difference-display {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .score-display {
+            display: flex;
+            gap: 40px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--gold);
+        }
+
+        /* Phase: Results */
+        .phase-results {
+            text-align: center;
+            max-width: 800px;
+        }
+
+        .phase-results h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: var(--success);
+        }
+
+        .final-score {
+            font-size: 5rem;
+            font-weight: bold;
+            background: linear-gradient(180deg, var(--gold), #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 20px 0;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .result-card-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .result-card-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .play-again-btn {
+            padding: 15px 50px;
+            font-size: 1.2rem;
+            background: var(--accent-balanced);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .play-again-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Exit button */
+        .exit-btn {
+            padding: 15px 50px;
+            font-size: 1.2rem;
+            background: var(--accent-right);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            margin-left: 20px;
+        }
+
+        .exit-btn:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+
+        .exit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Hidden class */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Config display */
+        .config-display {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Balance Trainer</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-dot" id="wsStatus"></div>
+                    <span id="wsStatusText">Odpojené</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot" id="leftHandStatus"></div>
+                    <span>Ľavá</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot" id="rightHandStatus"></div>
+                    <span>Pravá</span>
+                </div>
+                <div class="status-item" id="recordingStatus" style="display:none;">
+                    <div class="status-dot connected" style="background: #ef4444;"></div>
+                    <span>REC</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Debug Panel -->
+        <div class="debug-panel" id="debugPanel">
+            <div class="debug-row">
+                <div class="debug-hand">
+                    <div class="debug-title">ĽAVÁ RUKA - ADC hodnoty</div>
+                    <div class="debug-value">
+                        <span class="debug-label">Malíček (adc[1]):</span>
+                        <span class="debug-num" id="leftAdc1">0</span>
+                    </div>
+                    <div class="debug-value">
+                        <span class="debug-label">Prsteník (adc[2]):</span>
+                        <span class="debug-num" id="leftAdc2">0</span>
+                    </div>
+                    <div class="debug-value">
+                        <span class="debug-label">Prostredník (adc[3]):</span>
+                        <span class="debug-num" id="leftAdc3">0</span>
+                    </div>
+                    <div class="debug-value">
+                        <span class="debug-label">Ukazovák (adc[4]):</span>
+                        <span class="debug-num" id="leftAdc4">0</span>
+                    </div>
+                    <div class="debug-value">
+                        <span class="debug-label">Palec (adc[5]):</span>
+                        <span class="debug-num" id="leftAdc5">0</span>
+                    </div>
+                </div>
+                <div class="debug-hand">
+                    <div class="debug-title">PRAVÁ RUKA - ADC hodnoty</div>
+                    <div class="debug-value">
+                        <span class="debug-label">Malíček (adc[1]):</span>
+                        <span class="debug-num" id="rightAdc1">0</span>
+                    </div>
+                    <div class="debug-value">
+                        <span class="debug-label">Prsteník (adc[2]):</span>
+                        <span class="debug-num" id="rightAdc2">0</span>
+                    </div>
+                    <div class="debug-value">
+                        <span class="debug-label">Prostredník (adc[3]):</span>
+                        <span class="debug-num" id="rightAdc3">0</span>
+                    </div>
+                    <div class="debug-value">
+                        <span class="debug-label">Ukazovák (adc[4]):</span>
+                        <span class="debug-num" id="rightAdc4">0</span>
+                    </div>
+                    <div class="debug-value">
+                        <span class="debug-label">Palec (adc[5]):</span>
+                        <span class="debug-num" id="rightAdc5">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Phase: Instructions -->
+            <section class="phase-instructions" id="phaseInstructions">
+                <h2>Vitajte v Balance Trainer</h2>
+                <p class="instructions-text">
+                    Vašou úlohou je <strong>vybalansovať silu</strong> stláčania<br>
+                    medzi ľavou a pravou rukou na <strong>jednom prste</strong>.
+                </p>
+                <div class="finger-display" id="fingerDisplay">
+                    Prst: UKAZOVÁK
+                </div>
+                <div class="hands-preview">
+                    <div class="hand-icon left">🤚</div>
+                    <div class="hand-icon right">🤚</div>
+                </div>
+                <button class="start-btn" id="startBtn" disabled>
+                    Čakám na pripojenie rúk...
+                </button>
+                <div class="config-display" id="configDisplay"></div>
+            </section>
+
+            <!-- Phase: Calibration -->
+            <section class="phase-calibration hidden" id="phaseCalibration">
+                <div class="calibration-spinner"></div>
+                <p class="calibration-text">Kalibrácia senzorov...</p>
+                <p style="color: var(--text-secondary); margin-top: 10px;">Uvoľnite ruky</p>
+            </section>
+
+            <!-- Phase: Countdown -->
+            <section class="phase-countdown hidden" id="phaseCountdown">
+                <div class="countdown-number" id="countdownNumber">3</div>
+                <p class="countdown-text">Pripravte sa...</p>
+            </section>
+
+            <!-- Phase: Game -->
+            <section class="phase-game hidden" id="phaseGame">
+                <div class="timer-bar">
+                    <div class="timer-fill" id="timerFill" style="width: 100%"></div>
+                    <span class="timer-text" id="timerText">60s</span>
+                </div>
+
+                <div class="game-main">
+                    <!-- Left hand -->
+                    <div class="force-display">
+                        <div class="force-label" style="color: var(--accent-left)">ĽAVÁ</div>
+                        <div class="force-bar">
+                            <div class="force-zero-line"></div>
+                            <div class="force-fill left" id="leftForceFill"></div>
+                        </div>
+                        <div class="force-value" id="leftForceValue" style="color: var(--accent-left)">0</div>
+                        <div class="force-raw" id="leftForceRaw">raw: 0</div>
+                    </div>
+
+                    <!-- Balance meter in center -->
+                    <div class="balance-center">
+                        <div class="balance-meter">
+                            <div class="balance-meter-fill unbalanced" id="balanceMeterFill"></div>
+                            <div class="balance-needle" id="balanceNeedle"></div>
+                            <div class="balance-center-dot"></div>
+                        </div>
+                        <div class="balance-indicator unbalanced" id="balanceIndicator">
+                            NEVYVÁŽENÉ
+                        </div>
+                        <div class="difference-display" id="differenceDisplay">
+                            Rozdiel: 0
+                        </div>
+                        <div class="score-display">
+                            <div class="score-item">
+                                <div class="score-label">Skóre</div>
+                                <div class="score-value" id="currentScore">0</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">Čas v rovnováhe</div>
+                                <div class="score-value" id="balanceTime">0s</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right hand -->
+                    <div class="force-display">
+                        <div class="force-label" style="color: var(--accent-right)">PRAVÁ</div>
+                        <div class="force-bar">
+                            <div class="force-zero-line"></div>
+                            <div class="force-fill right" id="rightForceFill"></div>
+                        </div>
+                        <div class="force-value" id="rightForceValue" style="color: var(--accent-right)">0</div>
+                        <div class="force-raw" id="rightForceRaw">raw: 0</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Phase: Results -->
+            <section class="phase-results hidden" id="phaseResults">
+                <h2>Výborne!</h2>
+                <div class="final-score" id="finalScore">0</div>
+                <p style="color: var(--text-secondary); font-size: 1.2rem;">bodov</p>
+
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-card-label">Čas v rovnováhe</div>
+                        <div class="result-card-value" id="resultBalanceTime">0s</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-card-label">Priemerná odchýlka</div>
+                        <div class="result-card-value" id="resultAvgDeviation">0</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-card-label">Max. ľavá</div>
+                        <div class="result-card-value" id="resultMaxLeft">0</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-card-label">Max. pravá</div>
+                        <div class="result-card-value" id="resultMaxRight">0</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-card-label">Vzorky</div>
+                        <div class="result-card-value" id="resultSamples">0</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-card-label">Recording ID</div>
+                        <div class="result-card-value" id="resultRecordingId" style="font-size: 0.9rem;">-</div>
+                    </div>
+                </div>
+
+                <div class="result-card" id="dataSaveStatus" style="margin-bottom: 20px; display: none;">
+                    <div class="result-card-label">Uloženie dát</div>
+                    <div class="result-card-value" id="dataSaveStatusText" style="font-size: 1rem;">-</div>
+                </div>
+
+                <div class="results-buttons">
+                    <button class="play-again-btn" id="playAgainBtn">Hrať znova</button>
+                    <button class="exit-btn" id="exitBtn">Ukončiť</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // ============================================
+        // Configuration (from URL params or defaults)
+        // ============================================
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Finger mapping: ADC index and Haptic API index
+        // ADC: adc[1]=little, adc[2]=ring, adc[3]=middle, adc[4]=index, adc[5]=thumb
+        // Haptic API: 0=thumb, 1=index, 2=middle, 3=ring, 4=little
+        const FINGER_NAMES = {
+            0: { sk: 'MALÍČEK', en: 'little', adcIndex: 1, hapticIndex: 4 },
+            1: { sk: 'PRSTENÍK', en: 'ring', adcIndex: 2, hapticIndex: 3 },
+            2: { sk: 'PROSTREDNÍK', en: 'middle', adcIndex: 3, hapticIndex: 2 },
+            3: { sk: 'UKAZOVÁK', en: 'index', adcIndex: 4, hapticIndex: 1 },
+            4: { sk: 'PALEC', en: 'thumb', adcIndex: 5, hapticIndex: 0 },
+        };
+
+        // Service URLs - hardcoded convention
+        // Games run in browser on host machine, so they use localhost
+        // Streamer: localhost:5555, Game Data API: localhost:8081
+        const DEFAULT_STREAMER_HOST = 'localhost';
+        const DEFAULT_STREAMER_PORT = '5555';
+        const DEFAULT_GAME_DATA_API_PORT = '8081';
+
+        // Get game_id from URL params (passed by main-app)
+        const gameId = urlParams.get('game_id') || 'balance-trainer';
+
+        const CONFIG = {
+            streamerWsUrl: `ws://${DEFAULT_STREAMER_HOST}:${DEFAULT_STREAMER_PORT}/ws`,
+            streamerHttpUrl: `http://${DEFAULT_STREAMER_HOST}:${DEFAULT_STREAMER_PORT}`,
+            gameDataApiUrl: `http://${DEFAULT_STREAMER_HOST}:${DEFAULT_GAME_DATA_API_PORT}/api/game-data/${gameId}`,
+            countdownSeconds: parseInt(urlParams.get('countdown') || '3'),
+            gameDurationSeconds: parseInt(urlParams.get('duration') || '60'),
+            balanceThreshold: parseFloat(urlParams.get('threshold') || '500'), // Absolute difference threshold
+            finger: parseInt(urlParams.get('finger') || '3'), // Default: index finger (3)
+            showDebug: urlParams.get('debug') !== 'false', // Show debug panel by default
+            playerNumber: parseInt(urlParams.get('player_number') || '1'), // Player number from main-app
+        };
+
+        // Get ADC index and Haptic index for selected finger
+        const SELECTED_ADC_INDEX = FINGER_NAMES[CONFIG.finger]?.adcIndex || 4;
+        const SELECTED_HAPTIC_INDEX = FINGER_NAMES[CONFIG.finger]?.hapticIndex || 1;
+        const SELECTED_FINGER_NAME = FINGER_NAMES[CONFIG.finger]?.sk || 'UKAZOVÁK';
+
+        console.log('Game Config:', CONFIG);
+        console.log('Streamer HTTP URL:', CONFIG.streamerHttpUrl);
+        console.log('Streamer WS URL:', CONFIG.streamerWsUrl);
+        console.log('Selected finger:', SELECTED_FINGER_NAME, 'ADC index:', SELECTED_ADC_INDEX, 'Haptic index:', SELECTED_HAPTIC_INDEX);
+
+        // ============================================
+        // State
+        // ============================================
+        const state = {
+            phase: 'instructions',
+            wsConnected: false,
+            leftHandConnected: false,
+            rightHandConnected: false,
+            leftPort: null,   // Serial port path for left hand (e.g., /dev/cu.usbserial-21220)
+            rightPort: null,  // Serial port path for right hand
+
+            // Raw ADC values for all fingers
+            leftAdc: [0, 0, 0, 0, 0, 0],
+            rightAdc: [0, 0, 0, 0, 0, 0],
+
+            // Selected finger values (after calibration, around 0)
+            leftForce: 0,
+            rightForce: 0,
+            leftMaxForce: 0,
+            rightMaxForce: 0,
+
+            // Game state
+            gameStartTime: null,
+            gameEndTime: null,
+            balanceTimeMs: 0,
+            lastBalanceCheck: null,
+            isBalanced: false,
+            score: 0,
+            sampleCount: 0,
+            deviationSum: 0,
+            countdownValue: CONFIG.countdownSeconds,
+            timeRemaining: CONFIG.gameDurationSeconds,
+            recordingId: null,
+            dataSaved: false,
+            dataSaveError: null,
+        };
+
+        // ============================================
+        // DOM Elements
+        // ============================================
+        const elements = {
+            // Status
+            wsStatus: document.getElementById('wsStatus'),
+            wsStatusText: document.getElementById('wsStatusText'),
+            leftHandStatus: document.getElementById('leftHandStatus'),
+            rightHandStatus: document.getElementById('rightHandStatus'),
+            recordingStatus: document.getElementById('recordingStatus'),
+
+            // Debug
+            debugPanel: document.getElementById('debugPanel'),
+            leftAdc1: document.getElementById('leftAdc1'),
+            leftAdc2: document.getElementById('leftAdc2'),
+            leftAdc3: document.getElementById('leftAdc3'),
+            leftAdc4: document.getElementById('leftAdc4'),
+            leftAdc5: document.getElementById('leftAdc5'),
+            rightAdc1: document.getElementById('rightAdc1'),
+            rightAdc2: document.getElementById('rightAdc2'),
+            rightAdc3: document.getElementById('rightAdc3'),
+            rightAdc4: document.getElementById('rightAdc4'),
+            rightAdc5: document.getElementById('rightAdc5'),
+
+            // Phases
+            phaseInstructions: document.getElementById('phaseInstructions'),
+            phaseCalibration: document.getElementById('phaseCalibration'),
+            phaseCountdown: document.getElementById('phaseCountdown'),
+            phaseGame: document.getElementById('phaseGame'),
+            phaseResults: document.getElementById('phaseResults'),
+
+            // Instructions
+            startBtn: document.getElementById('startBtn'),
+            fingerDisplay: document.getElementById('fingerDisplay'),
+            configDisplay: document.getElementById('configDisplay'),
+
+            // Countdown
+            countdownNumber: document.getElementById('countdownNumber'),
+
+            // Game
+            timerFill: document.getElementById('timerFill'),
+            timerText: document.getElementById('timerText'),
+            leftForceFill: document.getElementById('leftForceFill'),
+            rightForceFill: document.getElementById('rightForceFill'),
+            leftForceValue: document.getElementById('leftForceValue'),
+            rightForceValue: document.getElementById('rightForceValue'),
+            leftForceRaw: document.getElementById('leftForceRaw'),
+            rightForceRaw: document.getElementById('rightForceRaw'),
+            balanceMeterFill: document.getElementById('balanceMeterFill'),
+            balanceNeedle: document.getElementById('balanceNeedle'),
+            balanceIndicator: document.getElementById('balanceIndicator'),
+            differenceDisplay: document.getElementById('differenceDisplay'),
+            currentScore: document.getElementById('currentScore'),
+            balanceTime: document.getElementById('balanceTime'),
+
+            // Results
+            finalScore: document.getElementById('finalScore'),
+            resultBalanceTime: document.getElementById('resultBalanceTime'),
+            resultAvgDeviation: document.getElementById('resultAvgDeviation'),
+            resultMaxLeft: document.getElementById('resultMaxLeft'),
+            resultMaxRight: document.getElementById('resultMaxRight'),
+            resultSamples: document.getElementById('resultSamples'),
+            resultRecordingId: document.getElementById('resultRecordingId'),
+            dataSaveStatus: document.getElementById('dataSaveStatus'),
+            dataSaveStatusText: document.getElementById('dataSaveStatusText'),
+            playAgainBtn: document.getElementById('playAgainBtn'),
+            exitBtn: document.getElementById('exitBtn'),
+        };
+
+        // ============================================
+        // WebSocket Connection
+        // ============================================
+        let ws = null;
+
+        function connectWebSocket() {
+            console.log('Connecting to WebSocket:', CONFIG.streamerWsUrl);
+
+            ws = new WebSocket(CONFIG.streamerWsUrl);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                state.wsConnected = true;
+                updateStatusUI();
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                state.wsConnected = false;
+                state.leftHandConnected = false;
+                state.rightHandConnected = false;
+                updateStatusUI();
+                setTimeout(connectWebSocket, 2000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    handleMessage(msg);
+                } catch (e) {
+                    console.error('Failed to parse message:', e);
+                }
+            };
+        }
+
+        function handleMessage(msg) {
+            const kind = msg.kind;
+
+            if (kind === 'identifier') {
+                // Store hand connection status and port for haptic feedback
+                if (msg.hand === 'left') {
+                    state.leftHandConnected = true;
+                    state.leftPort = msg.port || null;
+                    console.log('Left hand identified, port:', state.leftPort);
+                }
+                if (msg.hand === 'right') {
+                    state.rightHandConnected = true;
+                    state.rightPort = msg.port || null;
+                    console.log('Right hand identified, port:', state.rightPort);
+                }
+                updateStatusUI();
+            }
+            else if (kind === 'sample') {
+                handleSample(msg);
+            }
+        }
+
+        function handleSample(msg) {
+            const hand = msg.hand;
+            const adc = msg.adc || [0, 0, 0, 0, 0, 0];
+
+            if (hand === 'left') {
+                state.leftHandConnected = true;
+                state.leftAdc = adc;
+                state.leftForce = adc[SELECTED_ADC_INDEX] || 0;
+                state.leftMaxForce = Math.max(state.leftMaxForce, Math.abs(state.leftForce));
+                // Store port if available (backup if identifier was missed)
+                if (msg.port && !state.leftPort) state.leftPort = msg.port;
+            } else if (hand === 'right') {
+                state.rightHandConnected = true;
+                state.rightAdc = adc;
+                state.rightForce = adc[SELECTED_ADC_INDEX] || 0;
+                state.rightMaxForce = Math.max(state.rightMaxForce, Math.abs(state.rightForce));
+                // Store port if available (backup if identifier was missed)
+                if (msg.port && !state.rightPort) state.rightPort = msg.port;
+            }
+
+            // Update debug panel
+            updateDebugPanel();
+
+            // Update game UI during game phase
+            if (state.phase === 'game') {
+                state.sampleCount++;
+                updateGameUI();
+            }
+
+            updateStatusUI();
+        }
+
+        function updateDebugPanel() {
+            if (!CONFIG.showDebug) return;
+
+            // Left hand
+            for (let i = 1; i <= 5; i++) {
+                const el = elements[`leftAdc${i}`];
+                const val = state.leftAdc[i] || 0;
+                el.textContent = val.toFixed(1);
+                el.className = 'debug-num ' + (val >= 0 ? 'positive' : 'negative');
+            }
+
+            // Right hand
+            for (let i = 1; i <= 5; i++) {
+                const el = elements[`rightAdc${i}`];
+                const val = state.rightAdc[i] || 0;
+                el.textContent = val.toFixed(1);
+                el.className = 'debug-num ' + (val >= 0 ? 'positive' : 'negative');
+            }
+        }
+
+        // ============================================
+        // HTTP API Calls
+        // ============================================
+        async function calibrate() {
+            console.log('Sending calibration command...');
+            try {
+                const response = await fetch(`${CONFIG.streamerHttpUrl}/api/calibration`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ port: 'all' })
+                });
+                const data = await response.json();
+                console.log('Calibration response:', data);
+                return true;
+            } catch (e) {
+                console.error('Calibration failed:', e);
+                return false;
+            }
+        }
+
+        async function startRecording() {
+            console.log('Starting recording...');
+            try {
+                const response = await fetch(`${CONFIG.streamerHttpUrl}/api/ws-recording/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        duration_s: CONFIG.gameDurationSeconds + 30, // Extra buffer
+                        compress: true,
+                        notes: `Balance Trainer - Finger: ${SELECTED_FINGER_NAME}, Duration: ${CONFIG.gameDurationSeconds}s`
+                    })
+                });
+                const data = await response.json();
+                state.recordingId = data.recording_id;
+                console.log('Recording started:', data);
+                elements.recordingStatus.style.display = 'flex';
+                return true;
+            } catch (e) {
+                console.error('Failed to start recording:', e);
+                return false;
+            }
+        }
+
+        async function stopRecording() {
+            console.log('Stopping recording...');
+            try {
+                const response = await fetch(`${CONFIG.streamerHttpUrl}/api/ws-recording/stop`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                console.log('Recording stopped:', data);
+                elements.recordingStatus.style.display = 'none';
+                return true;
+            } catch (e) {
+                console.error('Failed to stop recording:', e);
+                return false;
+            }
+        }
+
+        // ============================================
+        // Haptic Feedback
+        // ============================================
+
+        /**
+         * Trigger haptic (vibration) feedback on a specific hand.
+         * Used to provide tactile feedback when balance is lost.
+         *
+         * @param {string} hand - 'left' or 'right' (determines which device to vibrate)
+         * @param {number} finger - Finger index 0-4 (0=thumb, 1=index, 2=middle, 3=ring, 4=little)
+         * @param {number} pwm - Vibration intensity 0-255
+         * @param {number} durationMs - Duration in milliseconds (max 3000)
+         */
+        async function triggerHaptic(hand, finger = 2, pwm = 180, durationMs = 300) {
+            // Don't send haptic if not connected
+            if (!state.wsConnected) return;
+
+            // Get the actual serial port for the hand
+            const port = hand === 'left' ? state.leftPort : state.rightPort;
+            if (!port) {
+                console.warn(`No port available for ${hand} hand, skipping haptic`);
+                return;
+            }
+
+            console.log(`Triggering haptic: hand=${hand}, port=${port}, finger=${finger}, pwm=${pwm}, duration=${durationMs}ms`);
+
+            try {
+                const response = await fetch(`${CONFIG.streamerHttpUrl}/api/haptic`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        port: port,  // Actual serial port path (e.g., /dev/cu.usbserial-21220)
+                        finger: finger,
+                        pwm: pwm,
+                        duration_ms: durationMs
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.warn(`Haptic request failed: ${response.status} - ${errorText}`);
+                    console.warn(`Haptic URL was: ${CONFIG.streamerHttpUrl}/api/haptic`);
+                } else {
+                    console.log('Haptic triggered successfully');
+                }
+            } catch (e) {
+                console.error('Failed to trigger haptic:', e);
+                console.error(`Haptic URL was: ${CONFIG.streamerHttpUrl}/api/haptic`);
+                console.error('Make sure the streamer is running on localhost:5555');
+            }
+        }
+
+        // Haptic feedback state
+        const hapticState = {
+            lastHapticTime: 0,
+            cooldownMs: 1000,  // Minimum time between haptic triggers (prevents spam)
+            enabled: true,     // Can be disabled via URL param
+            pwm: 180,          // Default vibration intensity
+            durationMs: 300,   // Default vibration duration
+        };
+
+        // Load haptic config from URL params
+        hapticState.enabled = urlParams.get('haptic') !== 'false';  // Enabled by default
+        hapticState.cooldownMs = parseInt(urlParams.get('haptic_cooldown') || '1000');
+        hapticState.pwm = parseInt(urlParams.get('haptic_pwm') || '180');
+        hapticState.durationMs = parseInt(urlParams.get('haptic_duration') || '300');
+
+        console.log('Haptic Config:', hapticState);
+
+        /**
+         * Check if haptic feedback should be triggered based on cooldown.
+         * Triggers vibration on the hand that has MORE force (the "winning" hand).
+         */
+        function checkAndTriggerHaptic() {
+            if (!hapticState.enabled) return;
+
+            const now = Date.now();
+            if (now - hapticState.lastHapticTime < hapticState.cooldownMs) {
+                return;  // Still in cooldown period
+            }
+
+            // Determine which hand is "winning" (has more force)
+            // Vibrate the stronger hand as feedback to reduce pressure
+            const leftForce = Math.abs(state.leftForce);
+            const rightForce = Math.abs(state.rightForce);
+
+            let targetHand = null;
+            if (leftForce > rightForce && state.leftHandConnected) {
+                targetHand = 'left';
+            } else if (rightForce > leftForce && state.rightHandConnected) {
+                targetHand = 'right';
+            } else if (state.leftHandConnected) {
+                targetHand = 'left';
+            } else if (state.rightHandConnected) {
+                targetHand = 'right';
+            }
+
+            if (targetHand) {
+                triggerHaptic(targetHand, SELECTED_HAPTIC_INDEX, hapticState.pwm, hapticState.durationMs);
+                hapticState.lastHapticTime = now;
+            }
+        }
+
+        async function saveGameData() {
+            if (!CONFIG.gameDataApiUrl) {
+                console.log('Game Data API URL not configured, skipping data save');
+                return false;
+            }
+
+            const duration = (state.gameEndTime - state.gameStartTime) / 1000;
+            const avgDeviation = state.sampleCount > 0 ? state.deviationSum / state.sampleCount : 0;
+
+            const gameResults = {
+                session_id: state.recordingId || `session_${Date.now()}`,
+                player_number: CONFIG.playerNumber,
+                final_score: state.score,
+                balance_time_seconds: parseFloat((state.balanceTimeMs / 1000).toFixed(2)),
+                average_deviation: parseFloat(avgDeviation.toFixed(2)),
+                max_force_left: parseFloat(state.leftMaxForce.toFixed(2)),
+                max_force_right: parseFloat(state.rightMaxForce.toFixed(2)),
+                sample_count: state.sampleCount,
+                actual_duration_seconds: parseFloat(duration.toFixed(2)),
+                recording_id: state.recordingId,
+                finger_used: SELECTED_FINGER_NAME,
+                finger_index: CONFIG.finger,
+                balance_threshold: CONFIG.balanceThreshold,
+                game_duration_config: CONFIG.gameDurationSeconds,
+            };
+
+            console.log('Saving game data to:', CONFIG.gameDataApiUrl);
+            console.log('Game results:', gameResults);
+
+            try {
+                const response = await fetch(CONFIG.gameDataApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(gameResults)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Game data saved successfully:', data);
+                    state.dataSaved = true;
+                    state.dataSaveError = null;
+                    return true;
+                } else {
+                    const errorText = await response.text();
+                    console.error('Failed to save game data:', response.status, errorText);
+                    state.dataSaveError = `HTTP ${response.status}`;
+                    return false;
+                }
+            } catch (e) {
+                console.error('Failed to save game data:', e);
+                state.dataSaveError = e.message;
+                return false;
+            }
+        }
+
+        // ============================================
+        // Phase Management
+        // ============================================
+        function showPhase(phaseName) {
+            state.phase = phaseName;
+
+            elements.phaseInstructions.classList.add('hidden');
+            elements.phaseCalibration.classList.add('hidden');
+            elements.phaseCountdown.classList.add('hidden');
+            elements.phaseGame.classList.add('hidden');
+            elements.phaseResults.classList.add('hidden');
+
+            switch (phaseName) {
+                case 'instructions':
+                    elements.phaseInstructions.classList.remove('hidden');
+                    break;
+                case 'calibration':
+                    elements.phaseCalibration.classList.remove('hidden');
+                    runCalibration();
+                    break;
+                case 'countdown':
+                    elements.phaseCountdown.classList.remove('hidden');
+                    startCountdown();
+                    break;
+                case 'game':
+                    elements.phaseGame.classList.remove('hidden');
+                    startGame();
+                    break;
+                case 'results':
+                    elements.phaseResults.classList.remove('hidden');
+                    showResults();
+                    break;
+            }
+        }
+
+        // ============================================
+        // Calibration Phase
+        // ============================================
+        async function runCalibration() {
+            // Start recording first
+            await startRecording();
+
+            // Wait a moment then calibrate
+            await new Promise(r => setTimeout(r, 500));
+            await calibrate();
+
+            // Wait for calibration to settle
+            await new Promise(r => setTimeout(r, 1500));
+
+            // Move to countdown
+            showPhase('countdown');
+        }
+
+        // ============================================
+        // Countdown Phase
+        // ============================================
+        function startCountdown() {
+            state.countdownValue = CONFIG.countdownSeconds;
+            elements.countdownNumber.textContent = state.countdownValue;
+
+            const interval = setInterval(() => {
+                state.countdownValue--;
+
+                if (state.countdownValue > 0) {
+                    elements.countdownNumber.textContent = state.countdownValue;
+                } else {
+                    clearInterval(interval);
+                    elements.countdownNumber.textContent = 'ŠTART!';
+                    setTimeout(() => showPhase('game'), 500);
+                }
+            }, 1000);
+        }
+
+        // ============================================
+        // Game Phase
+        // ============================================
+        let gameInterval = null;
+
+        function startGame() {
+            state.gameStartTime = Date.now();
+            state.timeRemaining = CONFIG.gameDurationSeconds;
+            state.balanceTimeMs = 0;
+            state.lastBalanceCheck = Date.now();
+            state.score = 0;
+            state.sampleCount = 0;
+            state.deviationSum = 0;
+            state.leftMaxForce = 0;
+            state.rightMaxForce = 0;
+
+            gameInterval = setInterval(() => {
+                const elapsed = (Date.now() - state.gameStartTime) / 1000;
+                state.timeRemaining = Math.max(0, CONFIG.gameDurationSeconds - elapsed);
+
+                elements.timerFill.style.width = `${(state.timeRemaining / CONFIG.gameDurationSeconds) * 100}%`;
+                elements.timerText.textContent = `${Math.ceil(state.timeRemaining)}s`;
+
+                checkBalance();
+
+                if (state.timeRemaining <= 0) {
+                    endGame();
+                }
+            }, 100);
+        }
+
+        function checkBalance() {
+            const now = Date.now();
+            const deltaTime = now - state.lastBalanceCheck;
+            state.lastBalanceCheck = now;
+
+            // Calculate absolute difference
+            const difference = Math.abs(state.leftForce - state.rightForce);
+            state.deviationSum += difference;
+
+            // Check if balanced (difference below threshold)
+            const wasBalanced = state.isBalanced;
+            state.isBalanced = difference < CONFIG.balanceThreshold;
+
+            if (state.isBalanced) {
+                state.balanceTimeMs += deltaTime;
+                state.score += Math.round(deltaTime / 10);
+            }
+
+            // Trigger haptic feedback when transitioning from balanced to unbalanced
+            // This provides tactile feedback to the user when they lose balance
+            if (wasBalanced && !state.isBalanced) {
+                checkAndTriggerHaptic();
+            }
+
+            // Update indicators
+            if (state.isBalanced) {
+                elements.balanceIndicator.textContent = 'VYVÁŽENÉ!';
+                elements.balanceIndicator.classList.add('balanced');
+                elements.balanceIndicator.classList.remove('unbalanced');
+                elements.balanceMeterFill.classList.add('balanced');
+                elements.balanceMeterFill.classList.remove('unbalanced');
+            } else {
+                elements.balanceIndicator.textContent = 'NEVYVÁŽENÉ';
+                elements.balanceIndicator.classList.remove('balanced');
+                elements.balanceIndicator.classList.add('unbalanced');
+                elements.balanceMeterFill.classList.remove('balanced');
+                elements.balanceMeterFill.classList.add('unbalanced');
+            }
+
+            elements.differenceDisplay.textContent = `Rozdiel: ${difference.toFixed(0)}`;
+            elements.currentScore.textContent = state.score;
+            elements.balanceTime.textContent = `${(state.balanceTimeMs / 1000).toFixed(1)}s`;
+        }
+
+        function updateGameUI() {
+            // Values can be positive or negative after calibration
+            const leftVal = state.leftForce;
+            const rightVal = state.rightForce;
+
+            // Display values
+            elements.leftForceValue.textContent = leftVal.toFixed(0);
+            elements.rightForceValue.textContent = rightVal.toFixed(0);
+            elements.leftForceRaw.textContent = `raw: ${state.leftAdc[SELECTED_ADC_INDEX]?.toFixed(1) || 0}`;
+            elements.rightForceRaw.textContent = `raw: ${state.rightAdc[SELECTED_ADC_INDEX]?.toFixed(1) || 0}`;
+
+            // Force bars - scale to max 50% height each direction
+            const maxScale = 5000; // Max expected value
+            const leftHeight = Math.min(50, Math.abs(leftVal) / maxScale * 50);
+            const rightHeight = Math.min(50, Math.abs(rightVal) / maxScale * 50);
+
+            // Left bar
+            elements.leftForceFill.style.height = `${leftHeight}%`;
+            if (leftVal >= 0) {
+                elements.leftForceFill.style.bottom = '50%';
+                elements.leftForceFill.style.top = 'auto';
+            } else {
+                elements.leftForceFill.style.top = '50%';
+                elements.leftForceFill.style.bottom = 'auto';
+            }
+
+            // Right bar
+            elements.rightForceFill.style.height = `${rightHeight}%`;
+            if (rightVal >= 0) {
+                elements.rightForceFill.style.bottom = '50%';
+                elements.rightForceFill.style.top = 'auto';
+            } else {
+                elements.rightForceFill.style.top = '50%';
+                elements.rightForceFill.style.bottom = 'auto';
+            }
+
+            // Balance needle - rotate based on difference
+            const diff = leftVal - rightVal;
+            const maxDiff = 3000;
+            const rotation = Math.max(-60, Math.min(60, (diff / maxDiff) * 60));
+            elements.balanceNeedle.style.transform = `translateX(-50%) translateY(-100%) rotate(${rotation}deg)`;
+        }
+
+        async function endGame() {
+            clearInterval(gameInterval);
+            state.gameEndTime = Date.now();
+
+            await stopRecording();
+            await saveGameData();
+            showPhase('results');
+        }
+
+        // ============================================
+        // Results Phase
+        // ============================================
+        function showResults() {
+            const duration = (state.gameEndTime - state.gameStartTime) / 1000;
+            const avgDeviation = state.sampleCount > 0 ? state.deviationSum / state.sampleCount : 0;
+
+            elements.finalScore.textContent = state.score;
+            elements.resultBalanceTime.textContent = `${(state.balanceTimeMs / 1000).toFixed(1)}s`;
+            elements.resultAvgDeviation.textContent = avgDeviation.toFixed(0);
+            elements.resultMaxLeft.textContent = state.leftMaxForce.toFixed(0);
+            elements.resultMaxRight.textContent = state.rightMaxForce.toFixed(0);
+            elements.resultSamples.textContent = state.sampleCount;
+            elements.resultRecordingId.textContent = state.recordingId || '-';
+
+            // Show data save status if API was configured
+            if (CONFIG.gameDataApiUrl) {
+                elements.dataSaveStatus.style.display = 'block';
+                if (state.dataSaved) {
+                    elements.dataSaveStatusText.textContent = '✓ Uložené';
+                    elements.dataSaveStatusText.style.color = 'var(--success)';
+                } else if (state.dataSaveError) {
+                    elements.dataSaveStatusText.textContent = `✗ Chyba: ${state.dataSaveError}`;
+                    elements.dataSaveStatusText.style.color = 'var(--accent-right)';
+                } else {
+                    elements.dataSaveStatusText.textContent = '⏳ Ukladám...';
+                    elements.dataSaveStatusText.style.color = 'var(--gold)';
+                }
+            }
+        }
+
+        // ============================================
+        // UI Updates
+        // ============================================
+        function updateStatusUI() {
+            if (state.wsConnected) {
+                elements.wsStatus.classList.add('connected');
+                elements.wsStatusText.textContent = 'Pripojené';
+            } else {
+                elements.wsStatus.classList.remove('connected');
+                elements.wsStatusText.textContent = 'Odpojené';
+            }
+
+            elements.leftHandStatus.classList.toggle('connected', state.leftHandConnected);
+            elements.rightHandStatus.classList.toggle('connected', state.rightHandConnected);
+
+            if (state.phase === 'instructions') {
+                if (state.leftHandConnected || state.rightHandConnected) {
+                    elements.startBtn.disabled = false;
+                    elements.startBtn.textContent = 'Začať hru';
+                } else {
+                    elements.startBtn.disabled = true;
+                    elements.startBtn.textContent = 'Čakám na pripojenie rúk...';
+                }
+            }
+        }
+
+        // ============================================
+        // Event Listeners
+        // ============================================
+        elements.startBtn.addEventListener('click', () => {
+            showPhase('calibration');
+        });
+
+        elements.playAgainBtn.addEventListener('click', () => {
+            state.leftForce = 0;
+            state.rightForce = 0;
+            state.score = 0;
+            state.balanceTimeMs = 0;
+            state.sampleCount = 0;
+            state.deviationSum = 0;
+            state.dataSaved = false;
+            state.dataSaveError = null;
+            elements.dataSaveStatus.style.display = 'none';
+            showPhase('instructions');
+        });
+
+        elements.exitBtn.addEventListener('click', () => {
+            exitGame();
+        });
+
+        /**
+         * Exit the game - stop the Docker container and close the browser tab.
+         * Called when user clicks the Exit button.
+         *
+         * Note: window.close() works because the tab was opened via window.open()
+         * from the main-app using Flet's run_javascript().
+         */
+        async function exitGame() {
+            console.log('Exit button clicked, stopping game...');
+
+            // Disable button to prevent double-click
+            elements.exitBtn.disabled = true;
+            elements.exitBtn.textContent = 'Ukončujem...';
+
+            try {
+                // Call the main-app API to stop this game's Docker container
+                const stopUrl = `http://localhost:8081/api/stop-game/${gameId}`;
+                console.log('Calling stop game API:', stopUrl);
+
+                const response = await fetch(stopUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Stop game response:', data);
+                } else {
+                    console.warn('Stop game request returned:', response.status);
+                }
+            } catch (e) {
+                console.error('Failed to call stop game API:', e);
+                // Continue to close tab even if API call fails
+            }
+
+            // Close the browser tab
+            // This works because the tab was opened via window.open() from main-app
+            console.log('Closing browser tab...');
+            window.close();
+
+            // Fallback: If window.close() didn't work (e.g., user opened URL manually),
+            // show a message after a short delay
+            setTimeout(() => {
+                if (!window.closed) {
+                    console.log('window.close() did not work, showing fallback message');
+                    elements.exitBtn.textContent = 'Môžete zavrieť kartu';
+                    elements.exitBtn.disabled = false;
+                }
+            }, 300);
+        }
+
+        // ============================================
+        // Initialize
+        // ============================================
+        console.log('Balance Trainer initializing...');
+
+        // Update finger display
+        elements.fingerDisplay.textContent = `Prst: ${SELECTED_FINGER_NAME}`;
+
+        // Show config (including haptic settings)
+        const hapticInfo = hapticState.enabled
+            ? `Vibrácia: ON (${hapticState.pwm}pwm, ${hapticState.durationMs}ms, cooldown ${hapticState.cooldownMs}ms)`
+            : 'Vibrácia: OFF';
+        elements.configDisplay.textContent = `Odpočet: ${CONFIG.countdownSeconds}s | Hra: ${CONFIG.gameDurationSeconds}s | Prah: ${CONFIG.balanceThreshold} | ${hapticInfo}`;
+
+        // Show/hide debug panel
+        if (!CONFIG.showDebug) {
+            elements.debugPanel.style.display = 'none';
+        }
+
+        connectWebSocket();
+        showPhase('instructions');
+    </script>
+</body>
+</html>

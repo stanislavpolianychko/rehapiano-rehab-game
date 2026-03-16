@@ -1,0 +1,40 @@
+# Sekcie (celé polia)
+adc:
+  match: "section"   # celé pole 'adc' (list čísel)
+  divisor: 128
+
+# Prefixové kľúče vo vnútri 'imu'
+imu.linAcc*:
+  match: "prefix"    # všetky imu.kľúče začínajúce 'linAcc'
+  divisor: 100
+
+imu.gyro*:
+  match: "prefix"
+  divisor: 16
+
+imu.grav*:
+  match: "prefix"
+  divisor: 100
+
+# Ostatné zatiaľ necháme bez zmeny (= /1)
+imu.mag*:
+  match: "prefix"
+  divisor: 16
+
+imu.quat*:
+  match: "prefix"
+  divisor: 16384
+
+imu.pitch:
+  match: "key"
+  divisor: 16
+imu.roll:
+  match: "key"
+  divisor: 16
+imu.yaw:
+  match: "key"
+  divisor: 16
+
+imu.temp:
+  match: "key"
+  divisor: 1

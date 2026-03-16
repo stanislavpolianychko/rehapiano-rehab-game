@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>RehaPiano – Live</title>
+
+  <link rel="stylesheet" href="/static/app.css">
+  <!-- uPlot -->
+  <link rel="stylesheet" href="https://unpkg.com/uplot/dist/uPlot.min.css"/>
+  <script src="https://unpkg.com/uplot/dist/uPlot.iife.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>RehaPiano – Live</h1>
+  <div class="spacer"></div>
+
+  <!-- TOGGLE VIRTUAL MODE -->
+  <button id="btnVirtual"
+          class="toggle virtual"
+          type="button"
+          aria-pressed="false"
+          role="switch"
+          aria-checked="false"
+          title="Prepnúť virtuálny režim (klávesnica simuluje ruky)">
+    <span class="label-off">Virtual OFF</span>
+    <span class="label-on">Virtual ON</span>
+  </button>
+
+  <!-- TOGGLE FREEZE -->
+  <button id="btnFreeze"
+          class="toggle"
+          type="button"
+          aria-pressed="false"
+          role="switch"
+          aria-checked="false"
+          title="Pozastaviť/obnoviť živé dáta">
+    <span class="label-off">Freeze</span>
+    <span class="label-on">Unfreeze</span>
+  </button>
+
+  <div id="wsState" class="ws">WS: connecting…</div>
+</header>
+
+<main class="grid">
+  <!-- LEFT: Devices -->
+  <section class="card" aria-labelledby="h-dev">
+    <h3 id="h-dev">Zariadenia</h3>
+    <ul id="devices"></ul>
+  </section>
+
+  <!-- RIGHT: Motor settings + Charts -->
+  <section class="stack" aria-labelledby="h-charts">
+    <h2 id="h-charts" class="sr-only" style="position:absolute;left:-9999px">Grafy</h2>
+
+    <!-- Motor settings -->
+    <section class="card wide" aria-labelledby="h-motor">
+      <h3 id="h-motor">Motorky – nastavenie (vybrané zariadenie: <span id="activePort">—</span>)</h3>
+      <p class="note">Najprv vyber zariadenie vľavo. Hodnoty sa odošlú len pre daný prst.</p>
+
+      <div class="motor-panel">
+        <!-- Palec -->
+        <div class="finger-group" data-finger="thumb">
+          <h4>Palec</h4>
+          <label for="pwm-thumb">PWM</label>
+          <input id="pwm-thumb" type="range" min="0" max="255" step="1" value="128"
+                 oninput="document.getElementById('pwm-thumb-val').textContent=this.value">
+          <div class="range-labels"><span>min 0</span><span>max 255</span></div>
+
+          <label for="dur-thumb">Dĺžka (ms)</label>
+          <input id="dur-thumb" type="range" min="0" max="3000" step="10" value="500"
+                 oninput="document.getElementById('dur-thumb-val').textContent=this.value + ' ms'">
+          <div class="range-labels"><span>min 0</span><span>max 3000</span></div>
+
+          <div class="actions">
+            <span class="valchip">PWM: <span id="pwm-thumb-val">128</span></span>
+            <span class="valchip">ms: <span id="dur-thumb-val">500 ms</span></span>
+            <button class="btn primary" data-send="thumb">Send</button>
+          </div>
+        </div>
+
+        <!-- Ukazovák -->
+        <div class="finger-group" data-finger="index">
+          <h4>Ukazovák</h4>
+          <label for="pwm-index">PWM</label>
+          <input id="pwm-index" type="range" min="0" max="255" step="1" value="128"
+                 oninput="document.getElementById('pwm-index-val').textContent=this.value">
+          <div class="range-labels"><span>min 0</span><span>max 255</span></div>
+
+          <label for="dur-index">Dĺžka (ms)</label>
+          <input id="dur-index" type="range" min="0" max="3000" step="10" value="500"
+                 oninput="document.getElementById('dur-index-val').textContent=this.value + ' ms'">
+          <div class="range-labels"><span>min 0</span><span>max 3000</span></div>
+
+          <div class="actions">
+            <span class="valchip">PWM: <span id="pwm-index-val">128</span></span>
+            <span class="valchip">ms: <span id="dur-index-val">500 ms</span></span>
+            <button class="btn primary" data-send="index">Send</button>
+          </div>
+        </div>
+
+        <!-- Prostredník -->
+        <div class="finger-group" data-finger="middle">
+          <h4>Prostredník</h4>
+          <label for="pwm-middle">PWM</label>
+          <input id="pwm-middle" type="range" min="0" max="255" step="1" value="128"
+                 oninput="document.getElementById('pwm-middle-val').textContent=this.value">
+          <div class="range-labels"><span>min 0</span><span>max 255</span></div>
+
+          <label for="dur-middle">Dĺžka (ms)</label>
+          <input id="dur-middle" type="range" min="0" max="3000" step="10" value="500"
+                 oninput="document.getElementById('dur-middle-val').textContent=this.value + ' ms'">
+          <div class="range-labels"><span>min 0</span><span>max 3000</span></div>
+
+          <div class="actions">
+            <span class="valchip">PWM: <span id="pwm-middle-val">128</span></span>
+            <span class="valchip">ms: <span id="dur-middle-val">500 ms</span></span>
+            <button class="btn primary" data-send="middle">Send</button>
+          </div>
+        </div>
+
+        <!-- Prstenník -->
+        <div class="finger-group" data-finger="ring">
+          <h4>Prstenník</h4>
+          <label for="pwm-ring">PWM</label>
+          <input id="pwm-ring" type="range" min="0" max="255" step="1" value="128"
+                 oninput="document.getElementById('pwm-ring-val').textContent=this.value">
+          <div class="range-labels"><span>min 0</span><span>max 255</span></div>
+
+          <label for="dur-ring">Dĺžka (ms)</label>
+          <input id="dur-ring" type="range" min="0" max="3000" step="10" value="500"
+                 oninput="document.getElementById('dur-ring-val').textContent=this.value + ' ms'">
+          <div class="range-labels"><span>min 0</span><span>max 3000</span></div>
+
+          <div class="actions">
+            <span class="valchip">PWM: <span id="pwm-ring-val">128</span></span>
+            <span class="valchip">ms: <span id="dur-ring-val">500 ms</span></span>
+            <button class="btn primary" data-send="ring">Send</button>
+          </div>
+        </div>
+
+        <!-- Malíček -->
+        <div class="finger-group" data-finger="little">
+          <h4>Malíček</h4>
+          <label for="pwm-little">PWM</label>
+          <input id="pwm-little" type="range" min="0" max="255" step="1" value="128"
+                 oninput="document.getElementById('pwm-little-val').textContent=this.value">
+          <div class="range-labels"><span>min 0</span><span>max 255</span></div>
+
+          <label for="dur-little">Dĺžka (ms)</label>
+          <input id="dur-little" type="range" min="0" max="3000" step="10" value="500"
+                 oninput="document.getElementById('dur-little-val').textContent=this.value + ' ms'">
+          <div class="range-labels"><span>min 0</span><span>max 3000</span></div>
+
+          <div class="actions">
+            <span class="valchip">PWM: <span id="pwm-little-val">128</span></span>
+            <span class="valchip">ms: <span id="dur-little-val">500 ms</span></span>
+            <button class="btn primary" data-send="little">Send</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sendall-wrap">
+        <button id="btnSendAll">Odoslať na všetky prsty</button>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <div class="card">
+      <h3>ADC (tenzometre) — <span id="chartPortAdc">—</span></h3>
+      <div id="chart-adc" class="chart" role="img" aria-label="ADC graf"></div>
+      <div class="legend small">kanály: palec, ukazovák, prostredník, prstenník, malíček</div>
+    </div>
+
+    <div class="card">
+      <h3>Accelerometer — <span id="chartPortAcc">—</span></h3>
+      <div id="chart-acc" class="chart" role="img" aria-label="Accelerometer graf"></div>
+      <div class="legend small">Ax, Ay, Az</div>
+    </div>
+
+    <div class="card">
+      <h3>Gyroscope — <span id="chartPortGyro">—</span></h3>
+      <div id="chart-gyro" class="chart" role="img" aria-label="Gyroscope graf"></div>
+      <div class="legend small">GyroX, GyroY, GyroZ</div>
+    </div>
+
+    <div class="card">
+      <h3>Euler angles — <span id="chartPortEuler">—</span></h3>
+      <div id="chart-euler" class="chart" role="img" aria-label="Euler graf"></div>
+      <div class="legend small">Pitch, Roll, Yaw</div>
+    </div>
+
+    <div class="card">
+      <h3>Gravity vector — <span id="chartPortGrav">—</span></h3>
+      <div id="chart-grav" class="chart" role="img" aria-label="Gravity graf"></div>
+      <div class="legend small">gravX, gravY, gravZ</div>
+    </div>
+
+    <div class="card">
+      <h3>Compass — <span id="chartPortMag">—</span></h3>
+      <div id="chart-mag" class="chart" role="img" aria-label="Compass graf"></div>
+      <div class="legend small">Mx, My, Mz</div>
+    </div>
+
+    <div class="card">
+      <h3>Quaternion — <span id="chartPortQuat">—</span></h3>
+      <div id="chart-quat" class="chart" role="img" aria-label="Quaternion graf"></div>
+      <div class="legend small">Qw, Qx, Qy, Qz</div>
+    </div>
+
+    <div class="card">
+      <h3>Temperature — <span id="chartPortTemp">—</span></h3>
+      <div id="chart-temp" class="chart" role="img" aria-label="Temperature graf"></div>
+      <div class="legend small">Temp (°C)</div>
+    </div>
+  </section>
+</main>
+
+<!-- Virtual Mode Keyboard Guide (hidden by default) -->
+<section id="virtualGuide" class="card wide virtual-guide" style="display:none" aria-labelledby="h-virtual">
+  <h3 id="h-virtual">Virtual Mode - Keyboard Mapping</h3>
+  <div class="virtual-hands">
+    <div class="virtual-hand left">
+      <h4>Ľavá ruka</h4>
+      <div class="keys">
+        <span class="key" data-key="q">Q<br><small>malíček</small></span>
+        <span class="key" data-key="w">W<br><small>prstenník</small></span>
+        <span class="key" data-key="e">E<br><small>prostredník</small></span>
+        <span class="key" data-key="r">R<br><small>ukazovák</small></span>
+        <span class="key" data-key="t">T<br><small>palec</small></span>
+      </div>
+    </div>
+    <div class="virtual-hand right">
+      <h4>Pravá ruka</h4>
+      <div class="keys">
+        <span class="key" data-key="y">Y<br><small>malíček</small></span>
+        <span class="key" data-key="u">U<br><small>prstenník</small></span>
+        <span class="key" data-key="i">I<br><small>prostredník</small></span>
+        <span class="key" data-key="o">O<br><small>ukazovák</small></span>
+        <span class="key" data-key="p">P<br><small>palec</small></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card wide" aria-labelledby="h-log">
+  <h3 id="h-log">Live výpis</h3>
+  <div id="log"></div>
+</section>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
