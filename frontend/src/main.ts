@@ -19,7 +19,15 @@ const bigScore = document.getElementById('bigscore');
 const currentScore = document.getElementById('currentscore');
 const highScore = document.getElementById('highscore');
 
-if (bird == null || flightArea == null || land == null || replayButton == null || bigScore == null || currentScore == null || highScore == null) {
+if (
+    bird == null ||
+    flightArea == null ||
+    land == null ||
+    replayButton == null ||
+    bigScore == null ||
+    currentScore == null ||
+    highScore == null
+) {
     throw new Error('Missing an element');
 }
 
@@ -33,7 +41,7 @@ const game = new Game(
         rehaPianoScale: doctorSettings.responseStrength,
         rehaPianoEnabled: true,
         doctorSettings,
-    }
+    },
 );
 
 if ('ontouchstart' in document) {

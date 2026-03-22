@@ -10,7 +10,7 @@ export class Pipe {
     protected upperBox: BoundingBox = { x: 0, y: 0, width: 0, height: 0 };
     protected lowerBox: BoundingBox = { x: 0, y: 0, width: 0, height: 0 };
 
-    constructor(options: { topPipeHeight: number, bottomPipeHeight: number }) {
+    constructor(options: { topPipeHeight: number; bottomPipeHeight: number }) {
         this.domElement = document.createElement('div');
         this.domElement.className = 'pipe animated';
 

@@ -63,8 +63,9 @@ export class LevelProgression {
             ...options?.enabledProgressions,
         };
 
-        this.PROGRESSION_TYPES = (Object.keys(this.enabledProgressions) as ProgressionType[])
-            .filter(key => this.enabledProgressions[key]);
+        this.PROGRESSION_TYPES = (
+            Object.keys(this.enabledProgressions) as ProgressionType[]
+        ).filter((key) => this.enabledProgressions[key]);
     }
 
     public static fromDoctorSettings(settings: DoctorSettings): LevelProgression {
@@ -100,7 +101,8 @@ export class LevelProgression {
 
             if (this.currentLevel === 1) {
                 message = `Level ${this.currentLevel}: Getting Started`;
-                description = "Great job! The game will gradually become more challenging. You'll adapt step by step!";
+                description =
+                    "Great job! The game will gradually become more challenging. You'll adapt step by step!";
             } else {
                 progressionType = this.selectRandomProgressionType();
 
@@ -118,13 +120,13 @@ export class LevelProgression {
                 level: this.currentLevel,
                 progressionType,
                 message,
-                description
+                description,
             };
         }
 
         return {
             progressed: false,
-            level: this.currentLevel
+            level: this.currentLevel,
         };
     }
 
@@ -133,21 +135,24 @@ export class LevelProgression {
         return this.PROGRESSION_TYPES[randomIndex];
     }
 
-    protected getProgressionMessage(type: ProgressionType, stepCount: number): { message: string; description: string } {
+    protected getProgressionMessage(
+        type: ProgressionType,
+        stepCount: number,
+    ): { message: string; description: string } {
         const level = this.currentLevel;
 
         switch (type) {
             case 'hand_tension':
                 return {
                     message: `Level ${level}: More Hand Tension`,
-                    description: `Step ${stepCount}: You'll need to press/extend your hand with more force to move the bird. Build your strength gradually!`
+                    description: `Step ${stepCount}: You'll need to press/extend your hand with more force to move the bird. Build your strength gradually!`,
                 };
 
             case 'fast_reaction': {
                 const delay = Math.round(this.getPipeDelay() / 1000);
                 return {
                     message: `Level ${level}: Fast Reaction`,
-                    description: `Step ${stepCount}: Barriers will appear more often (every ${delay}s). React quickly and stay alert!`
+                    description: `Step ${stepCount}: Barriers will appear more often (every ${delay}s). React quickly and stay alert!`,
                 };
             }
 
@@ -155,44 +160,44 @@ export class LevelProgression {
                 const gap = Math.round(this.getPipeGap());
                 return {
                     message: `Level ${level}: Precision Control`,
-                    description: `Step ${stepCount}: Openings are getting narrower (${gap}px). Move with precision and control!`
+                    description: `Step ${stepCount}: Openings are getting narrower (${gap}px). Move with precision and control!`,
                 };
             }
 
             case 'speed_challenge':
                 return {
                     message: `Level ${level}: Speed Challenge`,
-                    description: `Step ${stepCount}: Movement response is faster. Practice smooth, controlled movements!`
+                    description: `Step ${stepCount}: Movement response is faster. Practice smooth, controlled movements!`,
                 };
 
             case 'endurance':
                 return {
                     message: `Level ${level}: Endurance Training`,
-                    description: `Step ${stepCount}: Longer sessions ahead. Build your endurance and maintain steady control!`
+                    description: `Step ${stepCount}: Longer sessions ahead. Build your endurance and maintain steady control!`,
                 };
 
             case 'coordination':
                 return {
                     message: `Level ${level}: Hand Coordination`,
-                    description: `Step ${stepCount}: Practice using both extension and compression. Coordinate your movements smoothly!`
+                    description: `Step ${stepCount}: Practice using both extension and compression. Coordinate your movements smoothly!`,
                 };
 
             case 'fine_motor':
                 return {
                     message: `Level ${level}: Fine Motor Control`,
-                    description: `Step ${stepCount}: Smaller, more precise movements are needed. Focus on fine motor skills!`
+                    description: `Step ${stepCount}: Smaller, more precise movements are needed. Focus on fine motor skills!`,
                 };
 
             case 'range_of_motion':
                 return {
                     message: `Level ${level}: Full Range of Motion`,
-                    description: `Step ${stepCount}: Use full extension and compression. Expand your range of motion gradually!`
+                    description: `Step ${stepCount}: Use full extension and compression. Expand your range of motion gradually!`,
                 };
 
             default:
                 return {
                     message: `Level ${level}`,
-                    description: "Keep going! The challenge continues to grow gradually."
+                    description: 'Keep going! The challenge continues to grow gradually.',
                 };
         }
     }

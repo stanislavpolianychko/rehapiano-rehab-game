@@ -84,16 +84,19 @@ export class Game {
 
         if (this.rehaPianoEnabled) {
             console.log('[Game] Connecting to RehaPiano at', rehaPianoUrl);
-            this.rehaPiano.connect().then(() => {
-                console.log('[Game] RehaPiano connected');
-                gameDebugger.log('RehaPiano connected');
-                this.createRehaPianoStatusIndicator();
-                this.enableVirtualMode();
-            }).catch((error) => {
-                console.warn('[Game] RehaPiano connection failed, keyboard fallback:', error);
-                this.rehaPianoEnabled = false;
-                this.createRehaPianoStatusIndicator();
-            });
+            this.rehaPiano
+                .connect()
+                .then(() => {
+                    console.log('[Game] RehaPiano connected');
+                    gameDebugger.log('RehaPiano connected');
+                    this.createRehaPianoStatusIndicator();
+                    this.enableVirtualMode();
+                })
+                .catch((error) => {
+                    console.warn('[Game] RehaPiano connection failed, keyboard fallback:', error);
+                    this.rehaPianoEnabled = false;
+                    this.createRehaPianoStatusIndicator();
+                });
         } else {
             this.createRehaPianoStatusIndicator();
         }
@@ -139,7 +142,9 @@ export class Game {
     protected set currentScore(newScore: number) {
         this._currentScore = newScore;
         this.domElements.bigScore.replaceChildren(...this.numberToImageElements(newScore, 'big'));
-        this.domElements.currentScore.replaceChildren(...this.numberToImageElements(newScore, 'small'));
+        this.domElements.currentScore.replaceChildren(
+            ...this.numberToImageElements(newScore, 'small'),
+        );
     }
 
     protected get highScore() {
@@ -148,31 +153,52 @@ export class Game {
 
     protected set highScore(newScore: number) {
         this._highScore = newScore;
-        this.domElements.highScore.replaceChildren(...this.numberToImageElements(newScore, 'small'));
+        this.domElements.highScore.replaceChildren(
+            ...this.numberToImageElements(newScore, 'small'),
+        );
         storage.setHighScore(newScore);
     }
 
     protected setGameOptionButtons(options: GameOptions) {
         const optionsButtons = document.getElementById('game-options')!;
-        const easyMode = optionsButtons.getElementsByClassName('option-easy')[0] as HTMLAnchorElement;
-        const debugMode = optionsButtons.getElementsByClassName('option-debug')[0] as HTMLAnchorElement;
+        const easyMode = optionsButtons.getElementsByClassName(
+            'option-easy',
+        )[0] as HTMLAnchorElement;
+        const debugMode = optionsButtons.getElementsByClassName(
+            'option-debug',
+        )[0] as HTMLAnchorElement;
 
-        easyMode.innerText = `easy mode (${options.isEasyModeOn ? 'ON' : 'OFF' })`;
+        easyMode.innerText = `easy mode (${options.isEasyModeOn ? 'ON' : 'OFF'})`;
         easyMode.href = '?';
         easyMode.href += options.isEasyModeOn ? '' : 'easy';
         easyMode.href += options.isDebugOn ? 'debug' : '';
 
-        debugMode.innerText = `debug (${options.isDebugOn ? 'ON' : 'OFF' })`;
+        debugMode.innerText = `debug (${options.isDebugOn ? 'ON' : 'OFF'})`;
         debugMode.href = '?';
         debugMode.href += options.isEasyModeOn ? 'easy' : '';
         debugMode.href += options.isDebugOn ? '' : 'debug';
     }
 
-    protected static readonly VIRTUAL_KEYS = new Set(['q','w','e','r','t','y','u','i','o','p']);
+    protected static readonly VIRTUAL_KEYS = new Set([
+        'q',
+        'w',
+        'e',
+        'r',
+        't',
+        'y',
+        'u',
+        'i',
+        'o',
+        'p',
+    ]);
 
     protected handleKeyDown(ev: KeyboardEvent): void {
         const keyLower = ev.key.toLowerCase();
-        if (Game.VIRTUAL_KEYS.has(keyLower) && this.rehaPianoEnabled && this.rehaPiano.isConnected) {
+        if (
+            Game.VIRTUAL_KEYS.has(keyLower) &&
+            this.rehaPianoEnabled &&
+            this.rehaPiano.isConnected
+        ) {
             if (!this.virtualKeysDown.has(ev.key)) {
                 this.virtualKeysDown.add(ev.key);
                 const apiKey = ev.shiftKey ? keyLower.toUpperCase() : keyLower;
@@ -214,21 +240,27 @@ export class Game {
             return;
         }
 
-        if (ev.key === 'ArrowUp' || ev.key === 'w' || ev.key === 'W' ||
-            ev.key === 'ArrowDown' || ev.key === 's' || ev.key === 'S') {
+        if (
+            ev.key === 'ArrowUp' ||
+            ev.key === 'w' ||
+            ev.key === 'W' ||
+            ev.key === 'ArrowDown' ||
+            ev.key === 's' ||
+            ev.key === 'S'
+        ) {
             this.targetControlVelocity = 0;
         }
     }
 
     protected enableVirtualMode(): void {
         fetch(`${this.rehaPianoApiBase}/api/virtual/enable`, { method: 'POST' })
-            .then(r => r.json())
-            .then(data => {
+            .then((r) => r.json())
+            .then((data) => {
                 console.log('[Game] Virtual mode enabled:', data);
                 console.log('[Game] Press Q/W/E/R/T (left) or Y/U/I/O/P (right) for compression');
                 console.log('[Game] Hold Shift + same keys for extension (decompression)');
             })
-            .catch(err => console.warn('[Game] Could not enable virtual mode:', err));
+            .catch((err) => console.warn('[Game] Could not enable virtual mode:', err));
     }
 
     protected sendVirtualKey(key: string, action: 'down' | 'up'): void {
@@ -243,7 +275,8 @@ export class Game {
         const accelerationRate = this.levelProgression.getAccelerationRate();
         const diff = this.targetControlVelocity - this.keyboardControlVelocity;
         if (Math.abs(diff) > 0.01) {
-            this.keyboardControlVelocity += Math.sign(diff) * Math.min(Math.abs(diff), accelerationRate);
+            this.keyboardControlVelocity +=
+                Math.sign(diff) * Math.min(Math.abs(diff), accelerationRate);
         } else {
             this.keyboardControlVelocity = this.targetControlVelocity;
         }
@@ -265,7 +298,13 @@ export class Game {
         if (!this.hasLoggedFirstInput && Math.abs(velocity) > 0.01) {
             this.hasLoggedFirstInput = true;
             const dir = avgForce > 0 ? 'compression/DOWN' : 'extension/UP';
-            console.log('[Game] RehaPiano input — force:', avgForce.toFixed(1), dir, 'velocity:', velocity.toFixed(3));
+            console.log(
+                '[Game] RehaPiano input — force:',
+                avgForce.toFixed(1),
+                dir,
+                'velocity:',
+                velocity.toFixed(3),
+            );
         }
 
         return velocity;
@@ -297,11 +336,12 @@ export class Game {
             }
 
             indicator.textContent = parts.join(' ');
-            indicator.style.background = wsOk && (left || right) && fresh
-                ? 'rgba(76, 175, 80, 0.9)'
-                : wsOk
-                    ? 'rgba(255, 152, 0, 0.9)'
-                    : 'rgba(244, 67, 54, 0.9)';
+            indicator.style.background =
+                wsOk && (left || right) && fresh
+                    ? 'rgba(76, 175, 80, 0.9)'
+                    : wsOk
+                      ? 'rgba(255, 152, 0, 0.9)'
+                      : 'rgba(244, 67, 54, 0.9)';
         }, 500);
     }
 
@@ -320,7 +360,9 @@ export class Game {
         await wait(750);
 
         scoreboard.classList.remove('visible', 'slide-up');
-        Array.from(scoreboard.getElementsByClassName('visible')).forEach(e => e.classList.remove('visible'));
+        Array.from(scoreboard.getElementsByClassName('visible')).forEach((e) =>
+            e.classList.remove('visible'),
+        );
 
         gameDebugger.resetBoxes();
 
@@ -335,12 +377,15 @@ export class Game {
         this.applyProgressionSettings();
 
         if (this.rehaPianoEnabled && !this.rehaPiano.isConnected) {
-            this.rehaPiano.connect().then(() => {
-                gameDebugger.log('RehaPiano reconnected');
-            }).catch(() => {});
+            this.rehaPiano
+                .connect()
+                .then(() => {
+                    gameDebugger.log('RehaPiano reconnected');
+                })
+                .catch(() => {});
         }
 
-        Array.from(document.getElementsByClassName('animated')).forEach(e => {
+        Array.from(document.getElementsByClassName('animated')).forEach((e) => {
             (e as HTMLElement).style.animationPlayState = 'running';
             (e as HTMLElement).style.webkitAnimationPlayState = 'running';
         });
@@ -356,7 +401,10 @@ export class Game {
         this.sessionStartTime = Date.now();
         this.lastRestReminder = Date.now();
 
-        console.log('[Game] Started. Control:', this.rehaPianoEnabled && this.rehaPiano.isConnected ? 'RehaPiano' : 'Keyboard');
+        console.log(
+            '[Game] Started. Control:',
+            this.rehaPianoEnabled && this.rehaPiano.isConnected ? 'RehaPiano' : 'Keyboard',
+        );
 
         this.applyProgressionSettings();
     }
@@ -366,7 +414,7 @@ export class Game {
 
         this.state = GameState.PlayerDying;
 
-        Array.from(document.getElementsByClassName('animated')).forEach(e => {
+        Array.from(document.getElementsByClassName('animated')).forEach((e) => {
             (e as HTMLElement).style.animationPlayState = 'paused';
             (e as HTMLElement).style.webkitAnimationPlayState = 'paused';
         });
@@ -419,7 +467,7 @@ export class Game {
         if (progression.progressed) {
             this.showProgressionMessage(
                 progression.message || `Level ${progression.level}`,
-                progression.description
+                progression.description,
             );
             setTimeout(() => {
                 this.applyProgressionSettings();
@@ -466,8 +514,12 @@ export class Game {
             this.progressionMessageTimeout = null;
         }
 
-        const titleElement = this.progressionMessageElement.querySelector('#progression-title') as HTMLElement;
-        const descElement = this.progressionMessageElement.querySelector('#progression-description') as HTMLElement;
+        const titleElement = this.progressionMessageElement.querySelector(
+            '#progression-title',
+        ) as HTMLElement;
+        const descElement = this.progressionMessageElement.querySelector(
+            '#progression-description',
+        ) as HTMLElement;
 
         if (titleElement) {
             titleElement.textContent = title;
@@ -494,11 +546,14 @@ export class Game {
     }
 
     protected numberToImageElements(digits: number, size: 'big' | 'small') {
-        return digits.toString().split('').map(n => {
-            const imgDigit = new Image();
-            imgDigit.src = `/assets/font_${size}_${n}.png`;
-            return imgDigit;
-        });
+        return digits
+            .toString()
+            .split('')
+            .map((n) => {
+                const imgDigit = new Image();
+                imgDigit.src = `/assets/font_${size}_${n}.png`;
+                return imgDigit;
+            });
     }
 
     protected tick() {
@@ -510,7 +565,7 @@ export class Game {
             if (elapsed >= this.doctorSettings.timeLimitMinutes) {
                 this.showProgressionMessage(
                     'Session Complete',
-                    `${this.doctorSettings.timeLimitMinutes} minute session finished. Great work!`
+                    `${this.doctorSettings.timeLimitMinutes} minute session finished. Great work!`,
                 );
                 this.die();
                 return;
@@ -518,7 +573,11 @@ export class Game {
         }
 
         // Rest reminder check
-        if (this.doctorSettings && this.doctorSettings.restReminderMinutes > 0 && !this.restReminderShowing) {
+        if (
+            this.doctorSettings &&
+            this.doctorSettings.restReminderMinutes > 0 &&
+            !this.restReminderShowing
+        ) {
             const sinceLastReminder = (now - this.lastRestReminder) / 1000 / 60;
             if (sinceLastReminder >= this.doctorSettings.restReminderMinutes) {
                 this.showRestReminder();
@@ -526,7 +585,7 @@ export class Game {
             }
         }
 
-        let controlVelocity = 0;
+        let controlVelocity: number;
 
         if (this.rehaPianoEnabled && this.rehaPiano.isConnected) {
             controlVelocity = this.getRehaPianoControlVelocity();
@@ -557,14 +616,14 @@ export class Game {
         this.isRunning = false;
 
         // Pause animations
-        Array.from(document.getElementsByClassName('animated')).forEach(e => {
+        Array.from(document.getElementsByClassName('animated')).forEach((e) => {
             (e as HTMLElement).style.animationPlayState = 'paused';
             (e as HTMLElement).style.webkitAnimationPlayState = 'paused';
         });
 
         this.showProgressionMessage(
             'Time to Rest',
-            'Take a short break. Press any key or tap to continue.'
+            'Take a short break. Press any key or tap to continue.',
         );
 
         const resumeHandler = () => {
@@ -572,7 +631,7 @@ export class Game {
             this.lastRestReminder = Date.now();
             this.isRunning = true;
 
-            Array.from(document.getElementsByClassName('animated')).forEach(e => {
+            Array.from(document.getElementsByClassName('animated')).forEach((e) => {
                 (e as HTMLElement).style.animationPlayState = 'running';
                 (e as HTMLElement).style.webkitAnimationPlayState = 'running';
             });

@@ -12,9 +12,9 @@ let currentSettings: DoctorSettings = storage.getDoctorSettings();
 function setupButtonGroup(id: string, onChange: (value: string) => void) {
     const container = document.getElementById(id)!;
     const buttons = container.querySelectorAll('button');
-    buttons.forEach(btn => {
+    buttons.forEach((btn) => {
         btn.addEventListener('click', () => {
-            buttons.forEach(b => b.classList.remove('active'));
+            buttons.forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
             onChange(btn.dataset.value!);
         });
@@ -24,7 +24,7 @@ function setupButtonGroup(id: string, onChange: (value: string) => void) {
 function setButtonGroupValue(id: string, value: string) {
     const container = document.getElementById(id)!;
     const buttons = container.querySelectorAll('button');
-    buttons.forEach(b => {
+    buttons.forEach((b) => {
         b.classList.toggle('active', b.dataset.value === value);
     });
 }
@@ -34,7 +34,7 @@ function setButtonGroupValue(id: string, value: string) {
 function setupFingerToggles(hand: 'left' | 'right') {
     const container = document.getElementById(`fingers-${hand}`)!;
     const buttons = container.querySelectorAll('.finger-btn');
-    buttons.forEach(btn => {
+    buttons.forEach((btn) => {
         btn.addEventListener('click', () => {
             const idx = parseInt((btn as HTMLElement).dataset.finger!);
             currentSettings.activeFingers[hand][idx] = !currentSettings.activeFingers[hand][idx];
@@ -46,7 +46,7 @@ function setupFingerToggles(hand: 'left' | 'right') {
 function updateFingerToggles(hand: 'left' | 'right') {
     const container = document.getElementById(`fingers-${hand}`)!;
     const buttons = container.querySelectorAll('.finger-btn');
-    buttons.forEach(btn => {
+    buttons.forEach((btn) => {
         const idx = parseInt((btn as HTMLElement).dataset.finger!);
         btn.classList.toggle('active', currentSettings.activeFingers[hand][idx]);
     });
@@ -59,24 +59,30 @@ function updateFingerVisibility() {
     const rightLabel = rightContainer.previousElementSibling as HTMLElement;
 
     const showLeft = currentSettings.activeHand === 'left' || currentSettings.activeHand === 'both';
-    const showRight = currentSettings.activeHand === 'right' || currentSettings.activeHand === 'both';
+    const showRight =
+        currentSettings.activeHand === 'right' || currentSettings.activeHand === 'both';
 
     leftContainer.style.opacity = showLeft ? '1' : '0.3';
     leftLabel.style.opacity = showLeft ? '1' : '0.3';
-    leftContainer.querySelectorAll('.finger-btn').forEach(btn => {
+    leftContainer.querySelectorAll('.finger-btn').forEach((btn) => {
         btn.classList.toggle('disabled', !showLeft);
     });
 
     rightContainer.style.opacity = showRight ? '1' : '0.3';
     rightLabel.style.opacity = showRight ? '1' : '0.3';
-    rightContainer.querySelectorAll('.finger-btn').forEach(btn => {
+    rightContainer.querySelectorAll('.finger-btn').forEach((btn) => {
         btn.classList.toggle('disabled', !showRight);
     });
 }
 
 // --- Sliders ---
 
-function setupSlider(id: string, displayId: string, format: (val: number) => string, onChange: (val: number) => void) {
+function setupSlider(
+    id: string,
+    displayId: string,
+    format: (val: number) => string,
+    onChange: (val: number) => void,
+) {
     const slider = document.getElementById(id) as HTMLInputElement;
     const display = document.getElementById(displayId)!;
 
@@ -87,7 +93,12 @@ function setupSlider(id: string, displayId: string, format: (val: number) => str
     });
 }
 
-function setSliderValue(id: string, displayId: string, value: number, format: (val: number) => string) {
+function setSliderValue(
+    id: string,
+    displayId: string,
+    value: number,
+    format: (val: number) => string,
+) {
     const slider = document.getElementById(id) as HTMLInputElement;
     const display = document.getElementById(displayId)!;
     slider.value = String(value);
@@ -99,7 +110,7 @@ function setSliderValue(id: string, displayId: string, value: number, format: (v
 function setupProgressionToggles() {
     const container = document.getElementById('progression-toggles')!;
     const buttons = container.querySelectorAll('.toggle-btn');
-    buttons.forEach(btn => {
+    buttons.forEach((btn) => {
         btn.addEventListener('click', () => {
             const key = (btn as HTMLElement).dataset.key as ProgressionKey;
             currentSettings.enabledProgressions[key] = !currentSettings.enabledProgressions[key];
@@ -111,7 +122,7 @@ function setupProgressionToggles() {
 function updateProgressionToggles() {
     const container = document.getElementById('progression-toggles')!;
     const buttons = container.querySelectorAll('.toggle-btn');
-    buttons.forEach(btn => {
+    buttons.forEach((btn) => {
         const key = (btn as HTMLElement).dataset.key as ProgressionKey;
         btn.classList.toggle('active', currentSettings.enabledProgressions[key]);
     });
@@ -133,14 +144,39 @@ function loadSettingsToUI() {
     updateFingerVisibility();
 
     setSliderValue('minimum-force', 'minimum-force-val', currentSettings.minimumForce, formatPlain);
-    setSliderValue('response-strength', 'response-strength-val', currentSettings.responseStrength * 1000, formatResponseStrength);
-    setSliderValue('maximum-speed', 'maximum-speed-val', currentSettings.maximumSpeed * 10, formatMaxSpeed);
+    setSliderValue(
+        'response-strength',
+        'response-strength-val',
+        currentSettings.responseStrength * 1000,
+        formatResponseStrength,
+    );
+    setSliderValue(
+        'maximum-speed',
+        'maximum-speed-val',
+        currentSettings.maximumSpeed * 10,
+        formatMaxSpeed,
+    );
 
     setSliderValue('gap-size', 'gap-size-val', currentSettings.gapSize, formatPlain);
-    setSliderValue('obstacle-frequency', 'obstacle-frequency-val', currentSettings.obstacleFrequency, formatFrequency);
+    setSliderValue(
+        'obstacle-frequency',
+        'obstacle-frequency-val',
+        currentSettings.obstacleFrequency,
+        formatFrequency,
+    );
 
-    setSliderValue('points-per-level', 'points-per-level-val', currentSettings.pointsPerLevel, formatPlain);
-    setSliderValue('max-difficulty', 'max-difficulty-val', currentSettings.maxDifficultyLevel, formatPlain);
+    setSliderValue(
+        'points-per-level',
+        'points-per-level-val',
+        currentSettings.pointsPerLevel,
+        formatPlain,
+    );
+    setSliderValue(
+        'max-difficulty',
+        'max-difficulty-val',
+        currentSettings.maxDifficultyLevel,
+        formatPlain,
+    );
 
     updateProgressionToggles();
 
@@ -204,10 +240,23 @@ function init() {
     });
 
     document.getElementById('btn-reset')!.addEventListener('click', () => {
-        currentSettings = { ...DEFAULT_DOCTOR_SETTINGS,
+        currentSettings = {
+            ...DEFAULT_DOCTOR_SETTINGS,
             activeFingers: {
-                left: [...DEFAULT_DOCTOR_SETTINGS.activeFingers.left] as [boolean, boolean, boolean, boolean, boolean],
-                right: [...DEFAULT_DOCTOR_SETTINGS.activeFingers.right] as [boolean, boolean, boolean, boolean, boolean],
+                left: [...DEFAULT_DOCTOR_SETTINGS.activeFingers.left] as [
+                    boolean,
+                    boolean,
+                    boolean,
+                    boolean,
+                    boolean,
+                ],
+                right: [...DEFAULT_DOCTOR_SETTINGS.activeFingers.right] as [
+                    boolean,
+                    boolean,
+                    boolean,
+                    boolean,
+                    boolean,
+                ],
             },
             enabledProgressions: { ...DEFAULT_DOCTOR_SETTINGS.enabledProgressions },
         };

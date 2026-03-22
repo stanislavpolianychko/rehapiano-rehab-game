@@ -1,183 +1,328 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <title>RehaPiano — Doctor Settings</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-  </head>
-  <body>
-    <div id="settings-container">
-      <div id="settings-sky">
-        <div id="settings-panel">
-          <h1>Doctor Settings</h1>
-          <p class="subtitle">Configure rehabilitation parameters</p>
+    <head>
+        <title>RehaPiano — Doctor Settings</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width" />
+    </head>
+    <body>
+        <div id="settings-container">
+            <div id="settings-sky">
+                <div id="settings-panel">
+                    <h1>Doctor Settings</h1>
+                    <p class="subtitle">Configure rehabilitation parameters</p>
 
-          <!-- Hand Selection -->
-          <section class="settings-section">
-            <h2>Hand Selection</h2>
-            <div class="setting-row">
-              <label>Active hand</label>
-              <div class="button-group" id="active-hand">
-                <button data-value="left">Left</button>
-                <button data-value="both" class="active">Both</button>
-                <button data-value="right">Right</button>
-              </div>
-            </div>
+                    <!-- Hand Selection -->
+                    <section class="settings-section">
+                        <h2>Hand Selection</h2>
+                        <div class="setting-row">
+                            <label>Active hand</label>
+                            <div class="button-group" id="active-hand">
+                                <button data-value="left">Left</button>
+                                <button data-value="both" class="active">Both</button>
+                                <button data-value="right">Right</button>
+                            </div>
+                        </div>
 
-            <div class="setting-row">
-              <label>Active fingers</label>
-              <div class="finger-grid">
-                <div class="hand-label">Left</div>
-                <div class="finger-toggles" id="fingers-left">
-                  <button class="finger-btn active" data-finger="0" title="Little">5</button>
-                  <button class="finger-btn active" data-finger="1" title="Ring">4</button>
-                  <button class="finger-btn active" data-finger="2" title="Middle">3</button>
-                  <button class="finger-btn active" data-finger="3" title="Index">2</button>
-                  <button class="finger-btn active" data-finger="4" title="Thumb">1</button>
+                        <div class="setting-row">
+                            <label>Active fingers</label>
+                            <div class="finger-grid">
+                                <div class="hand-label">Left</div>
+                                <div class="finger-toggles" id="fingers-left">
+                                    <button
+                                        class="finger-btn active"
+                                        data-finger="0"
+                                        title="Little"
+                                    >
+                                        5
+                                    </button>
+                                    <button class="finger-btn active" data-finger="1" title="Ring">
+                                        4
+                                    </button>
+                                    <button
+                                        class="finger-btn active"
+                                        data-finger="2"
+                                        title="Middle"
+                                    >
+                                        3
+                                    </button>
+                                    <button class="finger-btn active" data-finger="3" title="Index">
+                                        2
+                                    </button>
+                                    <button class="finger-btn active" data-finger="4" title="Thumb">
+                                        1
+                                    </button>
+                                </div>
+                                <div class="hand-label">Right</div>
+                                <div class="finger-toggles" id="fingers-right">
+                                    <button
+                                        class="finger-btn active"
+                                        data-finger="0"
+                                        title="Little"
+                                    >
+                                        5
+                                    </button>
+                                    <button class="finger-btn active" data-finger="1" title="Ring">
+                                        4
+                                    </button>
+                                    <button
+                                        class="finger-btn active"
+                                        data-finger="2"
+                                        title="Middle"
+                                    >
+                                        3
+                                    </button>
+                                    <button class="finger-btn active" data-finger="3" title="Index">
+                                        2
+                                    </button>
+                                    <button class="finger-btn active" data-finger="4" title="Thumb">
+                                        1
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Sensitivity -->
+                    <section class="settings-section">
+                        <h2>Movement Sensitivity</h2>
+                        <div class="setting-row">
+                            <label for="minimum-force"
+                                >Minimum force
+                                <span class="hint"
+                                    >How hard the patient must press before the bird responds</span
+                                ></label
+                            >
+                            <div class="slider-row">
+                                <span class="range-label">Easy</span>
+                                <input
+                                    type="range"
+                                    id="minimum-force"
+                                    min="1"
+                                    max="50"
+                                    value="5"
+                                    step="1"
+                                />
+                                <span class="range-label">Hard</span>
+                                <span class="value-display" id="minimum-force-val">5</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-row">
+                            <label for="response-strength"
+                                >Response strength
+                                <span class="hint"
+                                    >How much the bird moves per unit of force</span
+                                ></label
+                            >
+                            <div class="slider-row">
+                                <span class="range-label">Gentle</span>
+                                <input
+                                    type="range"
+                                    id="response-strength"
+                                    min="1"
+                                    max="50"
+                                    value="10"
+                                    step="1"
+                                />
+                                <span class="range-label">Strong</span>
+                                <span class="value-display" id="response-strength-val">0.010</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-row">
+                            <label for="maximum-speed"
+                                >Maximum speed
+                                <span class="hint">Speed cap for bird movement</span></label
+                            >
+                            <div class="slider-row">
+                                <span class="range-label">Slow</span>
+                                <input
+                                    type="range"
+                                    id="maximum-speed"
+                                    min="2"
+                                    max="20"
+                                    value="5"
+                                    step="1"
+                                />
+                                <span class="range-label">Fast</span>
+                                <span class="value-display" id="maximum-speed-val">0.5</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Starting Difficulty -->
+                    <section class="settings-section">
+                        <h2>Starting Difficulty</h2>
+                        <div class="setting-row">
+                            <label for="gap-size"
+                                >Gap size
+                                <span class="hint"
+                                    >How wide the openings between obstacles are</span
+                                ></label
+                            >
+                            <div class="slider-row">
+                                <span class="range-label">Narrow</span>
+                                <input
+                                    type="range"
+                                    id="gap-size"
+                                    min="80"
+                                    max="200"
+                                    value="140"
+                                    step="5"
+                                />
+                                <span class="range-label">Wide</span>
+                                <span class="value-display" id="gap-size-val">140</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-row">
+                            <label for="obstacle-frequency"
+                                >Obstacle frequency
+                                <span class="hint">How often new obstacles appear</span></label
+                            >
+                            <div class="slider-row">
+                                <span class="range-label">Fast</span>
+                                <input
+                                    type="range"
+                                    id="obstacle-frequency"
+                                    min="1500"
+                                    max="8000"
+                                    value="5000"
+                                    step="250"
+                                />
+                                <span class="range-label">Slow</span>
+                                <span class="value-display" id="obstacle-frequency-val">5.0s</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Progression -->
+                    <section class="settings-section">
+                        <h2>Progression</h2>
+                        <div class="setting-row">
+                            <label for="points-per-level"
+                                >Points per level
+                                <span class="hint"
+                                    >How many points before difficulty increases</span
+                                ></label
+                            >
+                            <div class="slider-row">
+                                <span class="range-label">Fast</span>
+                                <input
+                                    type="range"
+                                    id="points-per-level"
+                                    min="2"
+                                    max="20"
+                                    value="5"
+                                    step="1"
+                                />
+                                <span class="range-label">Slow</span>
+                                <span class="value-display" id="points-per-level-val">5</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-row">
+                            <label for="max-difficulty"
+                                >Maximum difficulty level
+                                <span class="hint"
+                                    >Difficulty will not increase beyond this level</span
+                                ></label
+                            >
+                            <div class="slider-row">
+                                <span class="range-label">Easy</span>
+                                <input
+                                    type="range"
+                                    id="max-difficulty"
+                                    min="1"
+                                    max="100"
+                                    value="50"
+                                    step="1"
+                                />
+                                <span class="range-label">Hard</span>
+                                <span class="value-display" id="max-difficulty-val">50</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-row">
+                            <label
+                                >Enabled exercises
+                                <span class="hint"
+                                    >Which difficulty types can be activated during play</span
+                                ></label
+                            >
+                            <div class="toggle-grid" id="progression-toggles">
+                                <button class="toggle-btn active" data-key="hand_tension">
+                                    Hand Tension
+                                </button>
+                                <button class="toggle-btn active" data-key="fast_reaction">
+                                    Fast Reaction
+                                </button>
+                                <button class="toggle-btn active" data-key="precision_control">
+                                    Precision Control
+                                </button>
+                                <button class="toggle-btn active" data-key="speed_challenge">
+                                    Speed Challenge
+                                </button>
+                                <button class="toggle-btn active" data-key="endurance">
+                                    Endurance
+                                </button>
+                                <button class="toggle-btn active" data-key="coordination">
+                                    Coordination
+                                </button>
+                                <button class="toggle-btn active" data-key="fine_motor">
+                                    Fine Motor
+                                </button>
+                                <button class="toggle-btn active" data-key="range_of_motion">
+                                    Range of Motion
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Session -->
+                    <section class="settings-section">
+                        <h2>Session</h2>
+                        <div class="setting-row">
+                            <label
+                                >Time limit
+                                <span class="hint"
+                                    >Automatically stop after this duration</span
+                                ></label
+                            >
+                            <div class="button-group" id="time-limit">
+                                <button data-value="0" class="active">Off</button>
+                                <button data-value="5">5 min</button>
+                                <button data-value="10">10 min</button>
+                                <button data-value="15">15 min</button>
+                                <button data-value="20">20 min</button>
+                            </div>
+                        </div>
+
+                        <div class="setting-row">
+                            <label
+                                >Rest reminder
+                                <span class="hint">Prompt the patient to rest</span></label
+                            >
+                            <div class="button-group" id="rest-reminder">
+                                <button data-value="0" class="active">Off</button>
+                                <button data-value="3">3 min</button>
+                                <button data-value="5">5 min</button>
+                                <button data-value="10">10 min</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Actions -->
+                    <div class="settings-actions">
+                        <button id="btn-reset" class="btn-secondary">Reset to Defaults</button>
+                        <button id="btn-save" class="btn-primary">Save & Start Game</button>
+                    </div>
                 </div>
-                <div class="hand-label">Right</div>
-                <div class="finger-toggles" id="fingers-right">
-                  <button class="finger-btn active" data-finger="0" title="Little">5</button>
-                  <button class="finger-btn active" data-finger="1" title="Ring">4</button>
-                  <button class="finger-btn active" data-finger="2" title="Middle">3</button>
-                  <button class="finger-btn active" data-finger="3" title="Index">2</button>
-                  <button class="finger-btn active" data-finger="4" title="Thumb">1</button>
-                </div>
-              </div>
             </div>
-          </section>
-
-          <!-- Sensitivity -->
-          <section class="settings-section">
-            <h2>Movement Sensitivity</h2>
-            <div class="setting-row">
-              <label for="minimum-force">Minimum force <span class="hint">How hard the patient must press before the bird responds</span></label>
-              <div class="slider-row">
-                <span class="range-label">Easy</span>
-                <input type="range" id="minimum-force" min="1" max="50" value="5" step="1">
-                <span class="range-label">Hard</span>
-                <span class="value-display" id="minimum-force-val">5</span>
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <label for="response-strength">Response strength <span class="hint">How much the bird moves per unit of force</span></label>
-              <div class="slider-row">
-                <span class="range-label">Gentle</span>
-                <input type="range" id="response-strength" min="1" max="50" value="10" step="1">
-                <span class="range-label">Strong</span>
-                <span class="value-display" id="response-strength-val">0.010</span>
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <label for="maximum-speed">Maximum speed <span class="hint">Speed cap for bird movement</span></label>
-              <div class="slider-row">
-                <span class="range-label">Slow</span>
-                <input type="range" id="maximum-speed" min="2" max="20" value="5" step="1">
-                <span class="range-label">Fast</span>
-                <span class="value-display" id="maximum-speed-val">0.5</span>
-              </div>
-            </div>
-          </section>
-
-          <!-- Starting Difficulty -->
-          <section class="settings-section">
-            <h2>Starting Difficulty</h2>
-            <div class="setting-row">
-              <label for="gap-size">Gap size <span class="hint">How wide the openings between obstacles are</span></label>
-              <div class="slider-row">
-                <span class="range-label">Narrow</span>
-                <input type="range" id="gap-size" min="80" max="200" value="140" step="5">
-                <span class="range-label">Wide</span>
-                <span class="value-display" id="gap-size-val">140</span>
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <label for="obstacle-frequency">Obstacle frequency <span class="hint">How often new obstacles appear</span></label>
-              <div class="slider-row">
-                <span class="range-label">Fast</span>
-                <input type="range" id="obstacle-frequency" min="1500" max="8000" value="5000" step="250">
-                <span class="range-label">Slow</span>
-                <span class="value-display" id="obstacle-frequency-val">5.0s</span>
-              </div>
-            </div>
-          </section>
-
-          <!-- Progression -->
-          <section class="settings-section">
-            <h2>Progression</h2>
-            <div class="setting-row">
-              <label for="points-per-level">Points per level <span class="hint">How many points before difficulty increases</span></label>
-              <div class="slider-row">
-                <span class="range-label">Fast</span>
-                <input type="range" id="points-per-level" min="2" max="20" value="5" step="1">
-                <span class="range-label">Slow</span>
-                <span class="value-display" id="points-per-level-val">5</span>
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <label for="max-difficulty">Maximum difficulty level <span class="hint">Difficulty will not increase beyond this level</span></label>
-              <div class="slider-row">
-                <span class="range-label">Easy</span>
-                <input type="range" id="max-difficulty" min="1" max="100" value="50" step="1">
-                <span class="range-label">Hard</span>
-                <span class="value-display" id="max-difficulty-val">50</span>
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <label>Enabled exercises <span class="hint">Which difficulty types can be activated during play</span></label>
-              <div class="toggle-grid" id="progression-toggles">
-                <button class="toggle-btn active" data-key="hand_tension">Hand Tension</button>
-                <button class="toggle-btn active" data-key="fast_reaction">Fast Reaction</button>
-                <button class="toggle-btn active" data-key="precision_control">Precision Control</button>
-                <button class="toggle-btn active" data-key="speed_challenge">Speed Challenge</button>
-                <button class="toggle-btn active" data-key="endurance">Endurance</button>
-                <button class="toggle-btn active" data-key="coordination">Coordination</button>
-                <button class="toggle-btn active" data-key="fine_motor">Fine Motor</button>
-                <button class="toggle-btn active" data-key="range_of_motion">Range of Motion</button>
-              </div>
-            </div>
-          </section>
-
-          <!-- Session -->
-          <section class="settings-section">
-            <h2>Session</h2>
-            <div class="setting-row">
-              <label>Time limit <span class="hint">Automatically stop after this duration</span></label>
-              <div class="button-group" id="time-limit">
-                <button data-value="0" class="active">Off</button>
-                <button data-value="5">5 min</button>
-                <button data-value="10">10 min</button>
-                <button data-value="15">15 min</button>
-                <button data-value="20">20 min</button>
-              </div>
-            </div>
-
-            <div class="setting-row">
-              <label>Rest reminder <span class="hint">Prompt the patient to rest</span></label>
-              <div class="button-group" id="rest-reminder">
-                <button data-value="0" class="active">Off</button>
-                <button data-value="3">3 min</button>
-                <button data-value="5">5 min</button>
-                <button data-value="10">10 min</button>
-              </div>
-            </div>
-          </section>
-
-          <!-- Actions -->
-          <div class="settings-actions">
-            <button id="btn-reset" class="btn-secondary">Reset to Defaults</button>
-            <button id="btn-save" class="btn-primary">Save & Start Game</button>
-          </div>
+            <div id="settings-land"></div>
         </div>
-      </div>
-      <div id="settings-land"></div>
-    </div>
 
-    <script type="module" src="/src/settings.ts"></script>
-  </body>
+        <script type="module" src="/src/settings.ts"></script>
+    </body>
 </html>

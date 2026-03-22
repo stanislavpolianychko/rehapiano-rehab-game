@@ -2,7 +2,7 @@ export enum RehaPianoConnectionState {
     Disconnected = 'disconnected',
     Connecting = 'connecting',
     Connected = 'connected',
-    Error = 'error'
+    Error = 'error',
 }
 
 interface HandState {
@@ -20,8 +20,18 @@ export class RehaPianoConnection {
     protected connectionState: RehaPianoConnectionState = RehaPianoConnectionState.Disconnected;
     protected url: string;
 
-    protected leftHand: HandState = { connected: false, port: null, adc: [0, 0, 0, 0, 0, 0], lastSeen: 0 };
-    protected rightHand: HandState = { connected: false, port: null, adc: [0, 0, 0, 0, 0, 0], lastSeen: 0 };
+    protected leftHand: HandState = {
+        connected: false,
+        port: null,
+        adc: [0, 0, 0, 0, 0, 0],
+        lastSeen: 0,
+    };
+    protected rightHand: HandState = {
+        connected: false,
+        port: null,
+        adc: [0, 0, 0, 0, 0, 0],
+        lastSeen: 0,
+    };
     protected lastDataReceivedTime: number = 0;
     protected messageCount: number = 0;
 
@@ -35,17 +45,23 @@ export class RehaPianoConnection {
     }
 
     public get isConnected(): boolean {
-        return this.connectionState === RehaPianoConnectionState.Connected &&
-               this.ws !== null &&
-               this.ws.readyState === WebSocket.OPEN;
+        return (
+            this.connectionState === RehaPianoConnectionState.Connected &&
+            this.ws !== null &&
+            this.ws.readyState === WebSocket.OPEN
+        );
     }
 
     public get state(): RehaPianoConnectionState {
         return this.connectionState;
     }
 
-    public get leftHandConnected(): boolean { return this.leftHand.connected; }
-    public get rightHandConnected(): boolean { return this.rightHand.connected; }
+    public get leftHandConnected(): boolean {
+        return this.leftHand.connected;
+    }
+    public get rightHandConnected(): boolean {
+        return this.rightHand.connected;
+    }
 
     public async connect(): Promise<void> {
         if (this.isConnected) return;
@@ -103,7 +119,6 @@ export class RehaPianoConnection {
         }, delay);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected handleJsonMessage(raw: string): void {
         try {
             const msg = JSON.parse(raw);
@@ -215,7 +230,7 @@ export class RehaPianoConnection {
 
     public isDataFresh(maxAge: number = this.DEFAULT_MAX_DATA_AGE): boolean {
         if (this.lastDataReceivedTime === 0) return false;
-        return (Date.now() - this.lastDataReceivedTime) <= maxAge;
+        return Date.now() - this.lastDataReceivedTime <= maxAge;
     }
 
     public hasAnyHand(): boolean {

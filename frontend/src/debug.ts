@@ -64,9 +64,9 @@ export class GameDebugger {
             return;
         }
 
-        const shortTime = ("00000" + Date.now() % 100000).slice(-5);
+        const shortTime = ('00000' + (Date.now() % 100000)).slice(-5);
         console.log(`[${shortTime}]`, ...args);
-        this.domLogs.innerText += `[${shortTime}] ${args.map(a => (a as { toString(): string })?.toString()).join(' ')}\n`;
+        this.domLogs.innerText += `[${shortTime}] ${args.map((a) => (a as { toString(): string })?.toString()).join(' ')}\n`;
     }
 }
 

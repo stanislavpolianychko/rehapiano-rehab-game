@@ -44,21 +44,21 @@ export interface DoctorSettings {
     // Hand selection
     activeHand: 'left' | 'right' | 'both';
     activeFingers: {
-        left: [boolean, boolean, boolean, boolean, boolean];  // little, ring, middle, index, thumb
+        left: [boolean, boolean, boolean, boolean, boolean]; // little, ring, middle, index, thumb
         right: [boolean, boolean, boolean, boolean, boolean];
     };
 
     // Sensitivity
-    minimumForce: number;      // threshold (1–50, default 5)
-    responseStrength: number;  // scale (0.001–0.05, default 0.01)
-    maximumSpeed: number;      // max velocity (0.2–2.0, default 0.5)
+    minimumForce: number; // threshold (1–50, default 5)
+    responseStrength: number; // scale (0.001–0.05, default 0.01)
+    maximumSpeed: number; // max velocity (0.2–2.0, default 0.5)
 
     // Starting difficulty
-    gapSize: number;           // pipe gap in px (80–200, default 140)
+    gapSize: number; // pipe gap in px (80–200, default 140)
     obstacleFrequency: number; // pipe delay in ms (1500–8000, default 5000)
 
     // Progression
-    pointsPerLevel: number;    // score interval (2–20, default 5)
+    pointsPerLevel: number; // score interval (2–20, default 5)
     enabledProgressions: {
         hand_tension: boolean;
         fast_reaction: boolean;
@@ -72,6 +72,6 @@ export interface DoctorSettings {
     maxDifficultyLevel: number; // cap (1–100, default 50)
 
     // Session
-    timeLimitMinutes: number;  // 0 = off, or 5/10/15/20
+    timeLimitMinutes: number; // 0 = off, or 5/10/15/20
     restReminderMinutes: number; // 0 = off, or 3/5/10
 }

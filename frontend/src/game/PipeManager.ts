@@ -25,7 +25,7 @@ export class PipeManager {
     }
 
     public tick(now: number) {
-        this.pipes.forEach(pipe => pipe.tick());
+        this.pipes.forEach((pipe) => pipe.tick());
 
         if (now - this.lastPipeInsertedTimestamp < this.pipeDelay) {
             return;
@@ -40,7 +40,7 @@ export class PipeManager {
         this.pipes.push(pipe);
         this.pipeAreaDomElement.appendChild(pipe.domElement);
 
-        this.pipes = this.pipes.filter(pipe => {
+        this.pipes = this.pipes.filter((pipe) => {
             if (pipe.isOffScreen()) {
                 gameDebugger.log('pruning a pipe');
                 pipe.domElement.remove();
@@ -52,16 +52,16 @@ export class PipeManager {
     }
 
     public intersectsWith(box: BoundingBox) {
-        return this.pipes.find(pipe => pipe.intersectsWith(box)) != null;
+        return this.pipes.find((pipe) => pipe.intersectsWith(box)) != null;
     }
 
     public removeAll() {
-        this.pipes.forEach(pipe => pipe.domElement.remove());
+        this.pipes.forEach((pipe) => pipe.domElement.remove());
         this.pipes = [];
     }
 
     public nextUnscoredPipe() {
-        return this.pipes.find(pipe => pipe.scored === false);
+        return this.pipes.find((pipe) => pipe.scored === false);
     }
 
     protected createPipeDimensions(options: { gap: number }) {

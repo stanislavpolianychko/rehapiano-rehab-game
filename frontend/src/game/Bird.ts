@@ -69,8 +69,8 @@ export class Bird {
         const widthMultiplier = this.height - this.width;
         const heightMultiplier = this.width - this.height;
 
-        this.box.width = this.width + (widthMultiplier * Math.sin(rotationInRadians));
-        this.box.height = this.height + (heightMultiplier * Math.sin(rotationInRadians));
+        this.box.width = this.width + widthMultiplier * Math.sin(rotationInRadians);
+        this.box.height = this.height + heightMultiplier * Math.sin(rotationInRadians);
 
         const xShift = (this.width - this.box.width) / 2;
         const yShift = (this.height - this.box.height) / 2;
