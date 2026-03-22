@@ -1,5 +1,28 @@
+/**
+ * @file LevelProgression.ts
+ * Rehabilitation-focused difficulty progression system.
+ *
+ * As the player scores points, the game gradually increases difficulty by
+ * activating one or more progression types, each targeting a specific
+ * therapeutic exercise goal. Doctors can configure which progressions are
+ * enabled, the interval between level-ups, and baseline difficulty parameters.
+ */
+
 import type { DoctorSettings } from '../types';
 
+/**
+ * Identifies a category of difficulty progression, each mapping to a
+ * rehabilitation exercise goal:
+ *
+ * - `hand_tension` — Increases required finger force, building hand strength.
+ * - `fast_reaction` — Pipes appear more frequently, training reaction speed.
+ * - `precision_control` — Narrows the pipe gap, requiring finer motor control.
+ * - `speed_challenge` — Increases movement response speed for dynamic exercises.
+ * - `endurance` — Subtly increases demands over longer sessions to build stamina.
+ * - `coordination` — Encourages use of both extension and compression movements.
+ * - `fine_motor` — Demands smaller, more precise movements.
+ * - `range_of_motion` — Encourages full extension and compression range.
+ */
 export type ProgressionType =
     | 'hand_tension'
     | 'fast_reaction'
@@ -19,6 +42,18 @@ export interface LevelProgressionOptions {
     enabledProgressions?: Partial<Record<ProgressionType, boolean>>;
 }
 
+/**
+ * Manages rehabilitation-focused difficulty progression.
+ *
+ * Every {@link PROGRESSION_INTERVAL} points, the system randomly selects an
+ * enabled {@link ProgressionType} and increments its step count. The
+ * accumulated steps for each type are used to compute derived game parameters
+ * (max control velocity, pipe delay, pipe gap, acceleration rate) that are
+ * fed back into {@link PipeManager} and {@link Bird} each frame.
+ *
+ * Doctors can customise all baseline values and enable/disable individual
+ * progression types via {@link fromDoctorSettings}.
+ */
 export class LevelProgression {
     protected readonly PROGRESSION_INTERVAL: number;
     protected readonly MAX_LEVEL: number;
@@ -44,6 +79,9 @@ export class LevelProgression {
     protected readonly PROGRESSION_TYPES: ProgressionType[];
     protected readonly enabledProgressions: Record<ProgressionType, boolean>;
 
+    /**
+     * @param options - Optional overrides for progression intervals, caps, and base difficulty values.
+     */
     constructor(options?: LevelProgressionOptions) {
         this.PROGRESSION_INTERVAL = options?.progressionInterval ?? 5;
         this.MAX_LEVEL = options?.maxLevel ?? 1000;
@@ -68,6 +106,11 @@ export class LevelProgression {
         ).filter((key) => this.enabledProgressions[key]);
     }
 
+    /**
+     * Factory that creates a {@link LevelProgression} from doctor-prescribed settings.
+     * @param settings - Configuration from the doctor's dashboard.
+     * @returns A new instance tuned to the patient's therapeutic plan.
+     */
     public static fromDoctorSettings(settings: DoctorSettings): LevelProgression {
         return new LevelProgression({
             progressionInterval: settings.pointsPerLevel,
@@ -79,10 +122,19 @@ export class LevelProgression {
         });
     }
 
+    /** @returns The current difficulty level (starts at 0). */
     public getLevel(): number {
         return this.currentLevel;
     }
 
+    /**
+     * Checks whether the player's score warrants a level-up.
+     * If so, selects a random enabled progression type, increments its step
+     * count, and returns a user-facing message describing the new challenge.
+     * @param score - The player's current score.
+     * @returns An object indicating whether progression occurred, the new level,
+     *          and optional UI message/description text.
+     */
     public checkProgression(score: number): {
         progressed: boolean;
         level: number;
@@ -202,6 +254,11 @@ export class LevelProgression {
         }
     }
 
+    /**
+     * Computes the maximum bird control velocity based on active hand_tension
+     * and speed_challenge progression steps.
+     * @returns The clamped maximum velocity value.
+     */
     public getMaxControlVelocity(): number {
         let velocity = this.BASE_VELOCITY;
 
@@ -219,6 +276,10 @@ export class LevelProgression {
         return velocity;
     }
 
+    /**
+     * Computes the keyboard input acceleration rate, influenced by speed_challenge steps.
+     * @returns The acceleration rate (lower = smoother but slower response).
+     */
     public getAccelerationRate(): number {
         const baseRate = 0.05;
 
@@ -231,6 +292,10 @@ export class LevelProgression {
         return baseRate;
     }
 
+    /**
+     * Computes the pipe spawn delay based on fast_reaction and endurance steps.
+     * @returns Delay in milliseconds, clamped to {@link MIN_DELAY}.
+     */
     public getPipeDelay(): number {
         let delay = this.BASE_DELAY;
 
@@ -249,6 +314,10 @@ export class LevelProgression {
         return delay;
     }
 
+    /**
+     * Computes the vertical pipe gap based on precision_control and fast_reaction steps.
+     * @returns Gap size in pixels, clamped to {@link MIN_GAP}.
+     */
     public getPipeGap(): number {
         let gap = this.BASE_GAP;
 
@@ -267,10 +336,12 @@ export class LevelProgression {
         return gap;
     }
 
+    /** @returns An array of progression types that have been activated at least once. */
     public getActiveProgressions(): ProgressionType[] {
         return Array.from(this.activeProgressions.keys());
     }
 
+    /** Resets the progression state to level 0 with no active progressions. */
     public reset(): void {
         this.currentLevel = 0;
         this.lastProgressionScore = 0;

@@ -1,3 +1,11 @@
+/**
+ * @file Game.ts
+ * Main game orchestrator for the RehaPiano rehabilitation Flappy Bird game.
+ *
+ * Coordinates the game loop, input handling, scoring, level progression,
+ * and session management (time limits and rest reminders configured by a doctor).
+ */
+
 import { GameState, GameHtmlElements, GameOptions } from '../types';
 import type { DoctorSettings } from '../types';
 import { sounds } from '../Assets';
@@ -10,8 +18,24 @@ import { PipeManager } from './PipeManager';
 import { LevelProgression } from './LevelProgression';
 import { RehaPianoConnection } from '../rehapiano/RehaPianoConnection';
 
+/** Fixed simulation timestep targeting 60 Hz. */
 const TICK_RATE = 1000 / 60;
 
+/**
+ * Top-level game controller.
+ *
+ * **Game loop architecture:** A single `requestAnimationFrame` callback
+ * ({@link loop}) drives both rendering and physics. Physics uses a
+ * fixed-timestep accumulator so simulation speed is independent of frame rate.
+ *
+ * **Input handling:** Prefers RehaPiano WebSocket data when connected;
+ * falls back to keyboard (Arrow / WASD) with smoothed acceleration.
+ * Virtual keyboard keys (Q-P) are forwarded to the RehaPiano server to
+ * simulate sensor input during development.
+ *
+ * **Session management:** Supports doctor-configured time limits
+ * (auto-ends the session) and periodic rest reminders that pause the game.
+ */
 export class Game {
     protected _state!: GameState;
     protected _highScore!: number;
@@ -80,6 +104,8 @@ export class Game {
         const rehaPianoUrl = options.rehaPianoUrl ?? 'ws://localhost:5555/ws';
         this.rehaPiano = new RehaPianoConnection(rehaPianoUrl);
 
+        // Derive the HTTP API base URL from the WebSocket URL for virtual key REST calls.
+        // e.g., ws://localhost:5555/ws → http://localhost:5555
         this.rehaPianoApiBase = rehaPianoUrl.replace(/^ws/, 'http').replace(/\/ws$/, '');
 
         if (this.rehaPianoEnabled) {
@@ -110,6 +136,11 @@ export class Game {
         this.loop(performance.now());
     }
 
+    /**
+     * Handles touch/click on the game screen.
+     * Starts the game from the splash screen or resets from the score screen.
+     * @param _ev - The originating UI event (unused).
+     */
     public onScreenTouch(_ev: UIEvent) {
         if (this.state === GameState.SplashScreen) {
             this.start();
@@ -118,6 +149,7 @@ export class Game {
         }
     }
 
+    /** Shows the splash/title screen and transitions the game state to {@link GameState.SplashScreen}. */
     public async splash() {
         const splashImage = document.getElementById('splash')!;
         splashImage.classList.add('visible');
@@ -272,26 +304,45 @@ export class Game {
     }
 
     protected updateControlVelocity(): void {
+        // Gradually accelerate keyboard velocity toward the target to simulate
+        // pressure-sensitive input. This makes keyboard control feel more like
+        // the analog RehaPiano gloves rather than an instant on/off switch.
         const accelerationRate = this.levelProgression.getAccelerationRate();
         const diff = this.targetControlVelocity - this.keyboardControlVelocity;
         if (Math.abs(diff) > 0.01) {
+            // Move toward target by at most accelerationRate per tick
             this.keyboardControlVelocity +=
                 Math.sign(diff) * Math.min(Math.abs(diff), accelerationRate);
         } else {
+            // Close enough — snap to target to avoid floating-point drift
             this.keyboardControlVelocity = this.targetControlVelocity;
         }
     }
 
+    /**
+     * Reads the latest RehaPiano sensor data and converts it to a bird control velocity.
+     * Applies a dead-zone threshold and clamps to the current max velocity.
+     * @returns Control velocity (positive = down/compression, negative = up/extension), or 0 if unavailable.
+     */
     protected getRehaPianoControlVelocity(): number {
         if (!this.rehaPianoEnabled || !this.rehaPiano.isConnected) return 0;
         if (!this.rehaPiano.isDataFresh()) return 0;
 
+        // Get average ADC force across all connected fingers (signed value).
+        // Positive = compression (pressing down), Negative = extension (lifting up).
         const avgForce = this.rehaPiano.getAverageFingerValue();
 
+        // Dead zone: ignore small forces below the threshold to prevent jitter
+        // from sensor noise when the patient's hand is at rest.
         if (Math.abs(avgForce) < this.rehaPianoThreshold) return 0;
 
+        // Convert raw force to game velocity: force * scale factor.
+        // The sign is preserved, so compression → positive velocity (bird down)
+        // and extension → negative velocity (bird up).
         let velocity = avgForce * this.rehaPianoScale;
 
+        // Clamp velocity to the current maximum (which may decrease as
+        // the level progression system increases difficulty).
         const maxVelocity = this.getMaxControlVelocity();
         velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity));
 
@@ -556,6 +607,11 @@ export class Game {
             });
     }
 
+    /**
+     * Performs one fixed-timestep simulation step.
+     * Checks session time limits and rest reminders, reads input, advances the
+     * bird and pipes, detects scoring and collisions.
+     */
     protected tick() {
         const now = Date.now();
 
@@ -611,6 +667,11 @@ export class Game {
         }
     }
 
+    /**
+     * Pauses the game and displays a rest reminder overlay.
+     * Resumes on any user input after a short delay to prevent accidental dismissal.
+     * Triggered periodically based on the doctor-configured rest reminder interval.
+     */
     protected showRestReminder() {
         this.restReminderShowing = true;
         this.isRunning = false;
@@ -653,24 +714,40 @@ export class Game {
         }, 1000);
     }
 
+    /**
+     * Main `requestAnimationFrame` loop.
+     * Accumulates elapsed time and dispatches fixed-timestep {@link tick} calls.
+     * Always renders the bird regardless of whether the simulation is running.
+     * @param now - High-resolution timestamp from `requestAnimationFrame`.
+     */
     protected loop(now: number) {
+        // Schedule the next frame immediately so the loop continues even if
+        // this frame's logic throws an error.
         this.animationFrameId = requestAnimationFrame(this.loop.bind(this));
 
         if (this.isRunning) {
             const delta = now - this.lastFrameTime;
             this.lastFrameTime = now;
 
-            // Cap delta to avoid spiral of death after tab switch
+            // Cap delta at 200ms to prevent the "spiral of death" — if the tab
+            // was backgrounded for a long time, we don't want to run hundreds of
+            // catch-up ticks. Instead, we accept the time skip gracefully.
             this.accumulator += Math.min(delta, 200);
 
+            // Run as many fixed-timestep logic updates as needed to consume
+            // the accumulated time. This ensures game physics are deterministic
+            // at exactly 60Hz regardless of the actual display refresh rate.
             while (this.accumulator >= TICK_RATE) {
                 this.tick();
                 this.accumulator -= TICK_RATE;
             }
         } else {
+            // When paused, keep updating lastFrameTime to avoid a large delta
+            // spike when the game resumes.
             this.lastFrameTime = now;
         }
 
+        // Always render the bird (even when paused) so it stays visible.
         this.bird.draw();
     }
 }

@@ -1,14 +1,33 @@
+/**
+ * Doctor Settings page entry point for the RehaPiano game.
+ *
+ * Renders and manages the settings form that allows a supervising
+ * doctor or therapist to configure rehabilitation parameters such as
+ * active hands/fingers, sensor sensitivity, difficulty, progression
+ * curves, and session timing. Settings are persisted to localStorage
+ * via the {@link storage} module.
+ *
+ * @module settings
+ */
+
 import './styles/reset.css';
 import './styles/settings.css';
 import type { DoctorSettings } from './types';
 import { storage, DEFAULT_DOCTOR_SETTINGS } from './storage';
 
+/** Union type of all progression setting keys. */
 type ProgressionKey = keyof DoctorSettings['enabledProgressions'];
 
 let currentSettings: DoctorSettings = storage.getDoctorSettings();
 
 // --- Button groups (radio-style single select) ---
 
+/**
+ * Initializes a radio-style button group where only one button can be active.
+ *
+ * @param id - The DOM id of the container element holding the buttons.
+ * @param onChange - Callback invoked with the selected button's `data-value` attribute.
+ */
 function setupButtonGroup(id: string, onChange: (value: string) => void) {
     const container = document.getElementById(id)!;
     const buttons = container.querySelectorAll('button');
@@ -21,6 +40,12 @@ function setupButtonGroup(id: string, onChange: (value: string) => void) {
     });
 }
 
+/**
+ * Sets the active button in a button group to match the given value.
+ *
+ * @param id - The DOM id of the button group container.
+ * @param value - The `data-value` of the button to activate.
+ */
 function setButtonGroupValue(id: string, value: string) {
     const container = document.getElementById(id)!;
     const buttons = container.querySelectorAll('button');
@@ -31,6 +56,14 @@ function setButtonGroupValue(id: string, value: string) {
 
 // --- Finger toggles ---
 
+/**
+ * Attaches click handlers to individual finger toggle buttons for a given hand.
+ *
+ * Each button toggles the corresponding finger's active state in
+ * {@link currentSettings}.
+ *
+ * @param hand - Which hand's finger buttons to initialize.
+ */
 function setupFingerToggles(hand: 'left' | 'right') {
     const container = document.getElementById(`fingers-${hand}`)!;
     const buttons = container.querySelectorAll('.finger-btn');
@@ -43,6 +76,11 @@ function setupFingerToggles(hand: 'left' | 'right') {
     });
 }
 
+/**
+ * Synchronizes finger toggle button visuals with the current settings state.
+ *
+ * @param hand - Which hand's finger buttons to update.
+ */
 function updateFingerToggles(hand: 'left' | 'right') {
     const container = document.getElementById(`fingers-${hand}`)!;
     const buttons = container.querySelectorAll('.finger-btn');
@@ -52,6 +90,11 @@ function updateFingerToggles(hand: 'left' | 'right') {
     });
 }
 
+/**
+ * Shows or dims finger toggle sections based on the currently selected active hand.
+ *
+ * Disables interaction with finger buttons for hands that are not active.
+ */
 function updateFingerVisibility() {
     const leftContainer = document.getElementById('fingers-left')!;
     const rightContainer = document.getElementById('fingers-right')!;
@@ -77,6 +120,14 @@ function updateFingerVisibility() {
 
 // --- Sliders ---
 
+/**
+ * Attaches an input handler to a range slider and its value display.
+ *
+ * @param id - The DOM id of the `<input type="range">` element.
+ * @param displayId - The DOM id of the element displaying the formatted value.
+ * @param format - Formatter function converting the numeric value to a display string.
+ * @param onChange - Callback invoked with the new numeric value on each input event.
+ */
 function setupSlider(
     id: string,
     displayId: string,
@@ -93,6 +144,14 @@ function setupSlider(
     });
 }
 
+/**
+ * Programmatically sets a slider's value and updates its display label.
+ *
+ * @param id - The DOM id of the `<input type="range">` element.
+ * @param displayId - The DOM id of the element displaying the formatted value.
+ * @param value - The numeric value to set on the slider.
+ * @param format - Formatter function converting the numeric value to a display string.
+ */
 function setSliderValue(
     id: string,
     displayId: string,
@@ -107,6 +166,12 @@ function setSliderValue(
 
 // --- Progression toggles ---
 
+/**
+ * Attaches click handlers to the progression dimension toggle buttons.
+ *
+ * Each button toggles a specific rehabilitation progression dimension
+ * (e.g., hand_tension, fast_reaction) in {@link currentSettings}.
+ */
 function setupProgressionToggles() {
     const container = document.getElementById('progression-toggles')!;
     const buttons = container.querySelectorAll('.toggle-btn');
@@ -119,6 +184,9 @@ function setupProgressionToggles() {
     });
 }
 
+/**
+ * Synchronizes progression toggle button visuals with the current settings state.
+ */
 function updateProgressionToggles() {
     const container = document.getElementById('progression-toggles')!;
     const buttons = container.querySelectorAll('.toggle-btn');
@@ -130,13 +198,22 @@ function updateProgressionToggles() {
 
 // --- Format helpers ---
 
+/** Formats a response strength slider value (integer) to its real decimal representation. */
 const formatResponseStrength = (val: number): string => (val / 1000).toFixed(3);
+/** Formats a maximum speed slider value (integer) to its real decimal representation. */
 const formatMaxSpeed = (val: number): string => (val / 10).toFixed(1);
+/** Formats an obstacle frequency value (ms) to seconds with one decimal place. */
 const formatFrequency = (val: number): string => (val / 1000).toFixed(1) + 's';
+/** Identity formatter that converts a number to its plain string form. */
 const formatPlain = (val: number): string => String(val);
 
 // --- Load settings into UI ---
 
+/**
+ * Populates all UI controls with values from {@link currentSettings}.
+ *
+ * Called on initial page load and after a reset to defaults.
+ */
 function loadSettingsToUI() {
     setButtonGroupValue('active-hand', currentSettings.activeHand);
     updateFingerToggles('left');
@@ -186,6 +263,11 @@ function loadSettingsToUI() {
 
 // --- Initialize ---
 
+/**
+ * Initializes the settings page by wiring up all UI controls,
+ * attaching event listeners for save/reset actions, and loading
+ * the current settings into the form.
+ */
 function init() {
     // Hand selection
     setupButtonGroup('active-hand', (value) => {

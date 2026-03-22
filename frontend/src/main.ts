@@ -1,3 +1,14 @@
+/**
+ * Game entry point for the RehaPiano rehabilitation game.
+ *
+ * Bootstraps the application by initializing the debug overlay,
+ * loading doctor settings from localStorage, resolving required
+ * DOM elements, and constructing the {@link Game} instance.
+ * Binds touch/mouse input and starts the splash screen.
+ *
+ * @module main
+ */
+
 import './styles/reset.css';
 import './styles/main.css';
 import { initGameDebugger } from './debug';

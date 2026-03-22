@@ -1,6 +1,24 @@
+/**
+ * Visual debugging overlay for the RehaPiano game.
+ *
+ * Provides on-screen bounding box rendering, state change logging, and
+ * a timestamped console/DOM log. Intended for development and QA only;
+ * all operations are no-ops when debugging is disabled.
+ *
+ * @module debug
+ */
+
 import { GameState } from './types';
 import type { BoundingBox } from './types';
 
+/**
+ * Visual debugging overlay that renders bounding boxes and logs game events.
+ *
+ * When enabled, draws collision boxes on screen and maintains a scrolling
+ * log of game state transitions and arbitrary debug messages. All public
+ * methods short-circuit immediately when debugging is disabled, so the
+ * debugger can be left wired in without performance impact in production.
+ */
 export class GameDebugger {
     protected enabled;
     protected domLogs = document.getElementById('debug-logs')!;
@@ -12,6 +30,15 @@ export class GameDebugger {
         this.enabled = enabled;
     }
 
+    /**
+     * Draws or updates a debug bounding box overlay for a given DOM element.
+     *
+     * Creates the overlay `<div>` on first call for each key and repositions
+     * it on subsequent calls.
+     *
+     * @param key - The DOM element to associate the debug box with.
+     * @param box - The bounding box coordinates and dimensions to render.
+     */
     public drawBox(key: HTMLElement, box: BoundingBox) {
         if (!this.enabled) {
             return;
@@ -37,6 +64,12 @@ export class GameDebugger {
         boudingBox.style.height = `${box.height}px`;
     }
 
+    /**
+     * Removes all debug bounding boxes associated with pipe elements.
+     *
+     * Called when pipes are reset (e.g., on game restart) to clean up
+     * stale overlays.
+     */
     public resetBoxes() {
         if (!this.enabled) {
             return;
@@ -50,6 +83,12 @@ export class GameDebugger {
         });
     }
 
+    /**
+     * Logs a game state transition and updates the on-screen state label.
+     *
+     * @param oldState - The state being transitioned from.
+     * @param newState - The state being transitioned to.
+     */
     public logStateChange(oldState: GameState, newState: GameState) {
         if (!this.enabled) {
             return;
@@ -59,6 +98,12 @@ export class GameDebugger {
         this.domState.innerText = GameState[newState];
     }
 
+    /**
+     * Logs a timestamped debug message to both the browser console and the
+     * on-screen debug log panel.
+     *
+     * @param args - Values to log (converted to strings for DOM display).
+     */
     public log(...args: unknown[]) {
         if (!this.enabled) {
             return;
@@ -70,9 +115,22 @@ export class GameDebugger {
     }
 }
 
-// Singleton instance — initialized by initGameDebugger() in main.ts before any game classes are constructed
+/**
+ * Singleton {@link GameDebugger} instance.
+ *
+ * Must be initialized via {@link initGameDebugger} before use.
+ * Imported by other modules that need to log debug information.
+ */
 export let gameDebugger: GameDebugger;
 
+/**
+ * Initializes the singleton {@link gameDebugger} instance.
+ *
+ * Must be called once at application startup (in `main.ts`) before
+ * any game classes that depend on `gameDebugger` are constructed.
+ *
+ * @param enabled - Whether visual debugging should be active.
+ */
 export function initGameDebugger(enabled: boolean): void {
     gameDebugger = new GameDebugger(enabled);
 }
