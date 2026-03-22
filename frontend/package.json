@@ -1,24 +1,21 @@
 {
-  "name": "floppybird",
+  "name": "rehapiano-game-frontend",
   "version": "1.0.0",
-  "description": "<img src=\"screencap.png\" align=\"right\" width=\"250\">",
-  "main": "index.js",
+  "private": true,
+  "type": "module",
+  "description": "Rehabilitation game using the RehaPiano device",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "compile": "tsc"
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/nebez/floppybird.git"
-  },
-  "author": "Nebez Briefkani <me@nebezb.com>",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/nebez/floppybird/issues"
-  },
-  "homepage": "https://github.com/nebez/floppybird#readme",
   "dependencies": {
-    "http-server": "^13.0.2",
-    "typescript": "^4.4.4"
+    "howler": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/howler": "^2.2.11",
+    "typescript": "^5.5.0",
+    "vite": "^6.0.0"
   }
 }

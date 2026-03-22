@@ -1,0 +1,22 @@
+import { defineConfig } from 'vite';
+import { resolve } from 'path';
+
+export default defineConfig({
+  root: '.',
+  publicDir: 'public',
+  server: {
+    port: 8080,
+    open: true,
+  },
+  build: {
+    outDir: 'dist',
+    target: 'es2020',
+    sourcemap: true,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        settings: resolve(__dirname, 'settings.html'),
+      },
+    },
+  },
+});

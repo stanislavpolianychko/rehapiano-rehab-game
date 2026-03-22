@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start the Flappy Hand game (frontend)
+# Start the RehaPiano game (frontend dev server)
 cd "$(dirname "$0")/frontend"
 
 # Install dependencies if needed
@@ -8,9 +8,5 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Compile TypeScript and serve
-echo "Compiling TypeScript..."
-npx tsc
-
-echo "Starting dev server on http://localhost:8080"
-npx http-server -c-1 docs
+echo "Starting Vite dev server..."
+npm run dev

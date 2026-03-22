@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>RehaPiano Game</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="Rehabilitation game using the RehaPiano device" />
+  </head>
+  <body>
+    <div id="gamecontainer">
+      <div id="gamescreen">
+        <div id="sky" class="animated">
+          <div id="flyarea">
+            <div id="debug-state"></div>
+            <div id="debug-logs"></div>
+            <div id="ceiling" class="animated"></div>
+            <div id="player" class="bird animated"></div>
+            <div id="bigscore"></div>
+            <div id="splash"></div>
+            <div id="scoreboard">
+              <div id="medal"></div>
+              <div id="currentscore"></div>
+              <div id="highscore"></div>
+              <div id="replay"><img src="/assets/replay.png" alt="replay"></div>
+            </div>
+          </div>
+        </div>
+        <div id="land" class="animated"></div>
+        <div id="debug"></div>
+      </div>
+    </div>
+    <div id="footer">
+      <div id="game-options">
+        <a href="/settings.html" class="option-settings">doctor settings</a>
+        <a href="#" class="option-easy">####</a>
+        <a href="#" class="option-debug">####</a>
+      </div>
+      <a href="https://www.dotgears.com/">original game/concept/art by dong nguyen</a>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

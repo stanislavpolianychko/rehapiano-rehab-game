@@ -27,18 +27,8 @@
 *:before,
 *:after
 {
-   /* border box */
-   -moz-box-sizing: border-box;
-   -webkit-box-sizing: border-box;
    box-sizing: border-box;
-   /* gpu acceleration */
-   -webkit-transition: translate3d(0,0,0);
-   /* select disable */
    -webkit-touch-callout: none;
-   -webkit-user-select: none;
-   -khtml-user-select: none;
-   -moz-user-select: none;
-   -ms-user-select: none;
    user-select: none;
 }
 
@@ -60,9 +50,6 @@ body
    min-height: 525px;
 }
 
-/*
-Screen - Game
-*/
 #gamescreen
 {
    position: absolute;
@@ -76,7 +63,7 @@ Screen - Game
    top: 0;
    width: 100%;
    height: 80%;
-   background-image: url('../assets/sky.png');
+   background-image: url('/assets/sky.png');
    background-repeat: repeat-x;
    background-position: 0px 100%;
    background-color: #4ec0ca;
@@ -98,7 +85,7 @@ Screen - Game
    top: -16px;
    height: 16px;
    width: 100%;
-   background-image: url('../assets/ceiling.png');
+   background-image: url('/assets/ceiling.png');
    background-repeat: repeat-x;
 
    animation: animCeiling 481ms linear infinite;
@@ -110,7 +97,7 @@ Screen - Game
    bottom: 0;
    width: 100%;
    height: 20%;
-   background-image: url('../assets/land.png');
+   background-image: url('/assets/land.png');
    background-repeat: repeat-x;
    background-position: 0px 0px;
    background-color: #ded895;
@@ -147,7 +134,7 @@ Screen - Game
    left: 65px;
    width: 188px;
    height: 170px;
-   background-image: url('../assets/splash.png');
+   background-image: url('/assets/splash.png');
    background-repeat: no-repeat;
 
    transition: all 2000ms ease;
@@ -165,11 +152,10 @@ Screen - Game
    left: 43px;
    width: 236px;
    height: 280px;
-   background-image: url('../assets/scoreboard.png');
+   background-image: url('/assets/scoreboard.png');
    background-repeat: no-repeat;
    z-index: 1000;
 
-   /* Hidden by default, and popped down slightly */
    visibility: hidden;
    opacity: 0;
    transform: translate3d(0px, 40px, 0px);
@@ -246,7 +232,6 @@ Screen - Game
    width: 115px;
    cursor: pointer;
 
-   /* Hidden by default, and popped down slightly */
    opacity: 0;
    transform: translate3d(0px, 40px, 0px);
 
@@ -303,7 +288,7 @@ Screen - Game
    left: 60px;
    width: 34px;
    height: 24px;
-   background-image: url('../assets/bird.png');
+   background-image: url('/assets/bird.png');
    will-change: transform;
 
    animation: animBird 300ms steps(4) infinite;
@@ -317,11 +302,6 @@ Screen - Game
    height: 100%;
    z-index: 10;
 
-   /* Originally, this was 7500. Coupled with the animPipe distance of
-   moving each pipe left 1000px over the duration of the animation, it
-   makes it quite easy to adjust these two values in tandem. For each
-   pixel you move the pipe, multiply the distance by 7.5 to get the
-   total required animation time. For a 750px animation, use 5625ms */
    animation: animPipe 5625ms linear;
 }
 
@@ -330,7 +310,7 @@ Screen - Game
    position: absolute;
    top: 0;
    width: 52px;
-   background-image: url('../assets/pipe.png');
+   background-image: url('/assets/pipe.png');
    background-repeat: repeat-y;
    background-position: center;
 }
@@ -342,7 +322,7 @@ Screen - Game
    bottom: 0;
    width: 52px;
    height: 26px;
-   background-image: url('../assets/pipe-down.png');
+   background-image: url('/assets/pipe-down.png');
 }
 
 .pipe_lower
@@ -350,7 +330,7 @@ Screen - Game
    position: absolute;
    bottom: 0;
    width: 52px;
-   background-image: url('../assets/pipe.png');
+   background-image: url('/assets/pipe.png');
    background-repeat: repeat-y;
    background-position: center;
 }
@@ -362,7 +342,7 @@ Screen - Game
    top: 0;
    width: 52px;
    height: 26px;
-   background-image: url('../assets/pipe-up.png');
+   background-image: url('/assets/pipe-up.png');
 }
 
 #footer
@@ -396,4 +376,56 @@ Screen - Game
 #game-options a
 {
    display: inline-block;
+}
+
+/* RehaPiano status indicator */
+.rehapiano-status
+{
+   position: fixed;
+   top: 10px;
+   right: 10px;
+   padding: 8px 12px;
+   border-radius: 5px;
+   font-family: monospace;
+   font-size: 11px;
+   z-index: 10000;
+   color: white;
+   font-weight: bold;
+   background: rgba(244, 67, 54, 0.9);
+}
+
+/* Progression message overlay */
+.progression-message
+{
+   position: absolute;
+   top: 15%;
+   left: 50%;
+   transform: translateX(-50%);
+   background: rgba(0, 0, 0, 0.9);
+   color: white;
+   padding: 30px 50px;
+   border-radius: 15px;
+   border: 3px solid #4CAF50;
+   z-index: 1000;
+   opacity: 0;
+   transition: opacity 0.5s;
+   pointer-events: none;
+   text-align: center;
+   max-width: 500px;
+   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.progression-title
+{
+   font-size: 28px;
+   font-weight: bold;
+   margin-bottom: 15px;
+   color: #4CAF50;
+}
+
+.progression-description
+{
+   font-size: 18px;
+   line-height: 1.5;
+   color: #E0E0E0;
 }

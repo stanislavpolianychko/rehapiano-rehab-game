@@ -1,0 +1,313 @@
+*,
+*:before,
+*:after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 14px;
+    color: #fff;
+    background-color: #4ec0ca;
+}
+
+#settings-container {
+    min-height: 100%;
+    position: relative;
+}
+
+#settings-sky {
+    min-height: calc(100vh - 110px);
+    padding: 30px 20px 40px;
+    background-image: url('/assets/sky.png');
+    background-repeat: repeat-x;
+    background-position: 0px 100%;
+    background-color: #4ec0ca;
+    display: flex;
+    justify-content: center;
+}
+
+#settings-land {
+    height: 110px;
+    background-image: url('/assets/land.png');
+    background-repeat: repeat-x;
+    background-color: #ded895;
+}
+
+#settings-panel {
+    width: 100%;
+    max-width: 620px;
+}
+
+h1 {
+    font-size: 32px;
+    text-align: center;
+    margin-bottom: 4px;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+}
+
+.subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 30px;
+}
+
+.settings-section {
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    border: 2px solid rgba(255,255,255,0.1);
+}
+
+.settings-section h2 {
+    font-size: 18px;
+    margin-bottom: 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+
+.setting-row {
+    margin-bottom: 18px;
+}
+
+.setting-row:last-child {
+    margin-bottom: 0;
+}
+
+.setting-row > label {
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.hint {
+    display: block;
+    font-weight: normal;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 2px;
+}
+
+/* Button groups (radio-style) */
+.button-group {
+    display: flex;
+    gap: 4px;
+}
+
+.button-group button {
+    flex: 1;
+    padding: 8px 12px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: rgba(0,0,0,0.2);
+    color: rgba(255,255,255,0.6);
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.button-group button:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+.button-group button.active {
+    background: #4CAF50;
+    border-color: #66BB6A;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(76,175,80,0.4);
+}
+
+/* Finger toggles */
+.finger-grid {
+    display: grid;
+    grid-template-columns: 50px 1fr;
+    gap: 8px;
+    align-items: center;
+}
+
+.hand-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: rgba(255,255,255,0.6);
+    text-align: right;
+    padding-right: 8px;
+}
+
+.finger-toggles {
+    display: flex;
+    gap: 6px;
+}
+
+.finger-btn {
+    width: 40px;
+    height: 40px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    background: rgba(0,0,0,0.3);
+    color: rgba(255,255,255,0.4);
+    font-family: monospace;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.finger-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.finger-btn.active {
+    background: #4CAF50;
+    border-color: #66BB6A;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(76,175,80,0.4);
+}
+
+.finger-btn.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Sliders */
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.range-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    min-width: 40px;
+    text-align: center;
+}
+
+input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 3px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #4CAF50;
+    border: 2px solid #66BB6A;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #4CAF50;
+    border: 2px solid #66BB6A;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.value-display {
+    min-width: 48px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    background: rgba(0,0,0,0.3);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* Toggle grid (progression types) */
+.toggle-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.toggle-btn {
+    padding: 10px 14px;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    background: rgba(0,0,0,0.2);
+    color: rgba(255,255,255,0.5);
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+}
+
+.toggle-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+.toggle-btn.active {
+    background: rgba(76, 175, 80, 0.25);
+    border-color: #4CAF50;
+    color: #fff;
+}
+
+/* Action buttons */
+.settings-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    padding-bottom: 20px;
+}
+
+.btn-primary, .btn-secondary {
+    flex: 1;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 10px;
+    font-family: monospace;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-primary {
+    background: #4CAF50;
+    color: #fff;
+    border: 2px solid #66BB6A;
+    box-shadow: 0 4px 12px rgba(76,175,80,0.4);
+}
+
+.btn-primary:hover {
+    background: #66BB6A;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(76,175,80,0.5);
+}
+
+.btn-secondary {
+    background: rgba(0,0,0,0.3);
+    color: rgba(255,255,255,0.7);
+    border: 2px solid rgba(255,255,255,0.15);
+}
+
+.btn-secondary:hover {
+    background: rgba(0,0,0,0.4);
+    color: #fff;
+}
