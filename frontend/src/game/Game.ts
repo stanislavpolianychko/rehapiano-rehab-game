@@ -128,6 +128,7 @@ export class Game {
         }
 
         this.createProgressionMessageElement();
+        this.applyProgressionSettings();
 
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
         document.addEventListener('keyup', this.handleKeyUp.bind(this));
@@ -328,9 +329,9 @@ export class Game {
         if (!this.rehaPianoEnabled || !this.rehaPiano.isConnected) return 0;
         if (!this.rehaPiano.isDataFresh()) return 0;
 
-        // Get average ADC force across all connected fingers (signed value).
+        // Get average ADC force across the doctor-configured active hand(s) and finger(s).
         // Positive = compression (pressing down), Negative = extension (lifting up).
-        const avgForce = this.rehaPiano.getAverageFingerValue();
+        const avgForce = this.getActiveAverageFingerValue();
 
         // Dead zone: ignore small forces below the threshold to prevent jitter
         // from sensor noise when the patient's hand is at rest.
@@ -359,6 +360,37 @@ export class Game {
         }
 
         return velocity;
+    }
+
+    /**
+     * Computes the signed average ADC force across only the hands and fingers
+     * marked active in the doctor settings. Falls back to the full average if
+     * settings are unset.
+     */
+    protected getActiveAverageFingerValue(): number {
+        const settings = this.doctorSettings;
+        if (!settings) return this.rehaPiano.getAverageFingerValue();
+
+        const hands: ('left' | 'right')[] = [];
+        if (settings.activeHand === 'left' || settings.activeHand === 'both') hands.push('left');
+        if (settings.activeHand === 'right' || settings.activeHand === 'both') hands.push('right');
+
+        let sum = 0;
+        let count = 0;
+        for (const hand of hands) {
+            const connected =
+                hand === 'left'
+                    ? this.rehaPiano.leftHandConnected
+                    : this.rehaPiano.rightHandConnected;
+            if (!connected) continue;
+            const adc = this.rehaPiano.getHandAdc(hand);
+            for (let i = 0; i < 5; i++) {
+                if (!settings.activeFingers[hand][i]) continue;
+                sum += adc[i + 1] || 0;
+                count++;
+            }
+        }
+        return count === 0 ? 0 : sum / count;
     }
 
     protected createRehaPianoStatusIndicator(): void {
@@ -514,16 +546,6 @@ export class Game {
             this.highScore = this.currentScore;
         }
 
-        const progression = this.levelProgression.checkProgression(this.currentScore);
-        if (progression.progressed) {
-            this.showProgressionMessage(
-                progression.message || `Level ${progression.level}`,
-                progression.description,
-            );
-            setTimeout(() => {
-                this.applyProgressionSettings();
-            }, 500);
-        }
     }
 
     protected applyProgressionSettings(): void {
@@ -532,6 +554,12 @@ export class Game {
 
         this.pipes.setPipeDelay(pipeDelay);
         this.pipes.setPipeGap(pipeGap);
+
+        const root = document.documentElement;
+        const worldSpeed = this.doctorSettings?.worldSpeed ?? 1.0;
+        const pipeWidth = this.doctorSettings?.pipeWidth ?? 52;
+        root.style.setProperty('--world-speed-mult', String(worldSpeed));
+        root.style.setProperty('--pipe-width', `${pipeWidth}px`);
     }
 
     protected getMaxControlVelocity(): number {

@@ -151,9 +151,9 @@
                         </div>
                     </section>
 
-                    <!-- Starting Difficulty -->
+                    <!-- Difficulty -->
                     <section class="settings-section">
-                        <h2>Starting Difficulty</h2>
+                        <h2>Difficulty</h2>
                         <div class="setting-row">
                             <label for="gap-size"
                                 >Gap size
@@ -195,87 +195,48 @@
                                 <span class="value-display" id="obstacle-frequency-val">5.0s</span>
                             </div>
                         </div>
-                    </section>
 
-                    <!-- Progression -->
-                    <section class="settings-section">
-                        <h2>Progression</h2>
                         <div class="setting-row">
-                            <label for="points-per-level"
-                                >Points per level
+                            <label for="pipe-width"
+                                >Barrier width
                                 <span class="hint"
-                                    >How many points before difficulty increases</span
+                                    >Horizontal thickness of each obstacle</span
                                 ></label
                             >
                             <div class="slider-row">
-                                <span class="range-label">Fast</span>
+                                <span class="range-label">Thin</span>
                                 <input
                                     type="range"
-                                    id="points-per-level"
-                                    min="2"
-                                    max="20"
-                                    value="5"
-                                    step="1"
-                                />
-                                <span class="range-label">Slow</span>
-                                <span class="value-display" id="points-per-level-val">5</span>
-                            </div>
-                        </div>
-
-                        <div class="setting-row">
-                            <label for="max-difficulty"
-                                >Maximum difficulty level
-                                <span class="hint"
-                                    >Difficulty will not increase beyond this level</span
-                                ></label
-                            >
-                            <div class="slider-row">
-                                <span class="range-label">Easy</span>
-                                <input
-                                    type="range"
-                                    id="max-difficulty"
-                                    min="1"
+                                    id="pipe-width"
+                                    min="30"
                                     max="100"
-                                    value="50"
-                                    step="1"
+                                    value="52"
+                                    step="2"
                                 />
-                                <span class="range-label">Hard</span>
-                                <span class="value-display" id="max-difficulty-val">50</span>
+                                <span class="range-label">Thick</span>
+                                <span class="value-display" id="pipe-width-val">52</span>
                             </div>
                         </div>
 
                         <div class="setting-row">
-                            <label
-                                >Enabled exercises
+                            <label for="world-speed"
+                                >World speed
                                 <span class="hint"
-                                    >Which difficulty types can be activated during play</span
+                                    >How fast the world and barriers scroll</span
                                 ></label
                             >
-                            <div class="toggle-grid" id="progression-toggles">
-                                <button class="toggle-btn active" data-key="hand_tension">
-                                    Hand Tension
-                                </button>
-                                <button class="toggle-btn active" data-key="fast_reaction">
-                                    Fast Reaction
-                                </button>
-                                <button class="toggle-btn active" data-key="precision_control">
-                                    Precision Control
-                                </button>
-                                <button class="toggle-btn active" data-key="speed_challenge">
-                                    Speed Challenge
-                                </button>
-                                <button class="toggle-btn active" data-key="endurance">
-                                    Endurance
-                                </button>
-                                <button class="toggle-btn active" data-key="coordination">
-                                    Coordination
-                                </button>
-                                <button class="toggle-btn active" data-key="fine_motor">
-                                    Fine Motor
-                                </button>
-                                <button class="toggle-btn active" data-key="range_of_motion">
-                                    Range of Motion
-                                </button>
+                            <div class="slider-row">
+                                <span class="range-label">Slow</span>
+                                <input
+                                    type="range"
+                                    id="world-speed"
+                                    min="30"
+                                    max="250"
+                                    value="100"
+                                    step="5"
+                                />
+                                <span class="range-label">Fast</span>
+                                <span class="value-display" id="world-speed-val">1.00x</span>
                             </div>
                         </div>
                     </section>

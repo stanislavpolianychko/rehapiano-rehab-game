@@ -47,6 +47,8 @@ export const DEFAULT_DOCTOR_SETTINGS: DoctorSettings = {
     maximumSpeed: 0.5,
     gapSize: 140,
     obstacleFrequency: 5000,
+    pipeWidth: 52,
+    worldSpeed: 1.0,
     pointsPerLevel: 5,
     enabledProgressions: {
         hand_tension: true,

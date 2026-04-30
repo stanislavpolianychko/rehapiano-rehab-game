@@ -130,6 +130,10 @@ export interface DoctorSettings {
     gapSize: number;
     /** Time delay between pipe spawns in milliseconds (range 1500–8000, default 5000). */
     obstacleFrequency: number;
+    /** Horizontal width of each pipe/barrier in pixels (range 30–100, default 52). */
+    pipeWidth: number;
+    /** World scroll-speed multiplier applied to pipes, land, sky, ceiling (range 0.3–2.5, default 1.0). */
+    worldSpeed: number;
 
     // --- Progression ---
 

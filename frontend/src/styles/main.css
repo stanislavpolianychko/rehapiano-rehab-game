@@ -18,6 +18,11 @@
    100% { left: -100px; }
 }
 
+:root {
+   --world-speed-mult: 1;
+   --pipe-width: 52px;
+}
+
 @keyframes animCeiling {
    0% { background-position: 0px 0px; }
    100% { background-position: -63px 0px; }
@@ -68,7 +73,7 @@ body
    background-position: 0px 100%;
    background-color: #4ec0ca;
 
-   animation: animSky 7s linear infinite;
+   animation: animSky calc(7s / var(--world-speed-mult)) linear infinite;
 }
 
 #flyarea
@@ -88,7 +93,7 @@ body
    background-image: url('/assets/ceiling.png');
    background-repeat: repeat-x;
 
-   animation: animCeiling 481ms linear infinite;
+   animation: animCeiling calc(481ms / var(--world-speed-mult)) linear infinite;
 }
 
 #land
@@ -102,7 +107,7 @@ body
    background-position: 0px 0px;
    background-color: #ded895;
 
-   animation: animLand 2516ms linear infinite;
+   animation: animLand calc(2516ms / var(--world-speed-mult)) linear infinite;
 }
 
 .state-Playing #bigscore,
@@ -298,18 +303,18 @@ body
 {
    position: absolute;
    left: -100px;
-   width: 52px;
+   width: var(--pipe-width);
    height: 100%;
    z-index: 10;
 
-   animation: animPipe 5625ms linear;
+   animation: animPipe calc(5625ms / var(--world-speed-mult)) linear;
 }
 
 .pipe_upper
 {
    position: absolute;
    top: 0;
-   width: 52px;
+   width: var(--pipe-width);
    background-image: url('/assets/pipe.png');
    background-repeat: repeat-y;
    background-position: center;
@@ -320,7 +325,7 @@ body
    content: "";
    position: absolute;
    bottom: 0;
-   width: 52px;
+   width: var(--pipe-width);
    height: 26px;
    background-image: url('/assets/pipe-down.png');
 }
@@ -329,7 +334,7 @@ body
 {
    position: absolute;
    bottom: 0;
-   width: 52px;
+   width: var(--pipe-width);
    background-image: url('/assets/pipe.png');
    background-repeat: repeat-y;
    background-position: center;
@@ -340,7 +345,7 @@ body
    content: "";
    position: absolute;
    top: 0;
-   width: 52px;
+   width: var(--pipe-width);
    height: 26px;
    background-image: url('/assets/pipe-up.png');
 }

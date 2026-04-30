@@ -15,9 +15,6 @@ import './styles/settings.css';
 import type { DoctorSettings } from './types';
 import { storage, DEFAULT_DOCTOR_SETTINGS } from './storage';
 
-/** Union type of all progression setting keys. */
-type ProgressionKey = keyof DoctorSettings['enabledProgressions'];
-
 let currentSettings: DoctorSettings = storage.getDoctorSettings();
 
 // --- Button groups (radio-style single select) ---
@@ -164,38 +161,6 @@ function setSliderValue(
     display.textContent = format(value);
 }
 
-// --- Progression toggles ---
-
-/**
- * Attaches click handlers to the progression dimension toggle buttons.
- *
- * Each button toggles a specific rehabilitation progression dimension
- * (e.g., hand_tension, fast_reaction) in {@link currentSettings}.
- */
-function setupProgressionToggles() {
-    const container = document.getElementById('progression-toggles')!;
-    const buttons = container.querySelectorAll('.toggle-btn');
-    buttons.forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const key = (btn as HTMLElement).dataset.key as ProgressionKey;
-            currentSettings.enabledProgressions[key] = !currentSettings.enabledProgressions[key];
-            btn.classList.toggle('active');
-        });
-    });
-}
-
-/**
- * Synchronizes progression toggle button visuals with the current settings state.
- */
-function updateProgressionToggles() {
-    const container = document.getElementById('progression-toggles')!;
-    const buttons = container.querySelectorAll('.toggle-btn');
-    buttons.forEach((btn) => {
-        const key = (btn as HTMLElement).dataset.key as ProgressionKey;
-        btn.classList.toggle('active', currentSettings.enabledProgressions[key]);
-    });
-}
-
 // --- Format helpers ---
 
 /** Formats a response strength slider value (integer) to its real decimal representation. */
@@ -204,6 +169,8 @@ const formatResponseStrength = (val: number): string => (val / 1000).toFixed(3);
 const formatMaxSpeed = (val: number): string => (val / 10).toFixed(1);
 /** Formats an obstacle frequency value (ms) to seconds with one decimal place. */
 const formatFrequency = (val: number): string => (val / 1000).toFixed(1) + 's';
+/** Formats a world-speed slider value (percent) to its multiplier representation. */
+const formatWorldSpeed = (val: number): string => (val / 100).toFixed(2) + 'x';
 /** Identity formatter that converts a number to its plain string form. */
 const formatPlain = (val: number): string => String(val);
 
@@ -241,21 +208,13 @@ function loadSettingsToUI() {
         currentSettings.obstacleFrequency,
         formatFrequency,
     );
-
+    setSliderValue('pipe-width', 'pipe-width-val', currentSettings.pipeWidth, formatPlain);
     setSliderValue(
-        'points-per-level',
-        'points-per-level-val',
-        currentSettings.pointsPerLevel,
-        formatPlain,
+        'world-speed',
+        'world-speed-val',
+        Math.round(currentSettings.worldSpeed * 100),
+        formatWorldSpeed,
     );
-    setSliderValue(
-        'max-difficulty',
-        'max-difficulty-val',
-        currentSettings.maxDifficultyLevel,
-        formatPlain,
-    );
-
-    updateProgressionToggles();
 
     setButtonGroupValue('time-limit', String(currentSettings.timeLimitMinutes));
     setButtonGroupValue('rest-reminder', String(currentSettings.restReminderMinutes));
@@ -297,15 +256,12 @@ function init() {
     setupSlider('obstacle-frequency', 'obstacle-frequency-val', formatFrequency, (val) => {
         currentSettings.obstacleFrequency = val;
     });
-
-    // Progression
-    setupSlider('points-per-level', 'points-per-level-val', formatPlain, (val) => {
-        currentSettings.pointsPerLevel = val;
+    setupSlider('pipe-width', 'pipe-width-val', formatPlain, (val) => {
+        currentSettings.pipeWidth = val;
     });
-    setupSlider('max-difficulty', 'max-difficulty-val', formatPlain, (val) => {
-        currentSettings.maxDifficultyLevel = val;
+    setupSlider('world-speed', 'world-speed-val', formatWorldSpeed, (val) => {
+        currentSettings.worldSpeed = val / 100;
     });
-    setupProgressionToggles();
 
     // Session
     setupButtonGroup('time-limit', (value) => {
