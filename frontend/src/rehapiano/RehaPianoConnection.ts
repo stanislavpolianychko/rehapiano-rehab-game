@@ -49,6 +49,12 @@ interface HandState {
     port: string | null;
     /** Raw ADC readings: `[dummy, little, ring, middle, index, thumb]`. */
     adc: number[];
+    /**
+     * Per-channel resting baseline captured by {@link RehaPianoConnection.calibrate}.
+     * Subtracted from raw `adc` so that "hand at rest" maps to ~0 and the bird
+     * does not drift (no default down/up draft) when the patient is not pressing.
+     */
+    baseline: number[];
     /** Timestamp (ms since epoch) of the last received sample for this hand. */
     lastSeen: number;
 }
@@ -88,12 +94,14 @@ export class RehaPianoConnection {
         connected: false,
         port: null,
         adc: [0, 0, 0, 0, 0, 0],
+        baseline: [0, 0, 0, 0, 0, 0],
         lastSeen: 0,
     };
     protected rightHand: HandState = {
         connected: false,
         port: null,
         adc: [0, 0, 0, 0, 0, 0],
+        baseline: [0, 0, 0, 0, 0, 0],
         lastSeen: 0,
     };
     protected lastDataReceivedTime: number = 0;
@@ -266,6 +274,7 @@ export class RehaPianoConnection {
         hand.connected = false;
         hand.port = null;
         hand.adc = [0, 0, 0, 0, 0, 0];
+        hand.baseline = [0, 0, 0, 0, 0, 0];
         console.log('[RehaPiano] Removed:', msg.hand);
     }
 
@@ -294,8 +303,52 @@ export class RehaPianoConnection {
     }
 
     /**
-     * Computes the signed average ADC value across all finger sensors of
-     * every connected hand.
+     * Captures the current ADC readings of every connected hand as the
+     * resting baseline (zero offset).
+     *
+     * Flex/pressure sensors rarely read exactly 0 when the hand is at rest —
+     * each channel has its own bias. Without zeroing this out the game would
+     * see a constant non-zero force and the bird would continuously drift
+     * (a "default down draft"). Call this when the patient's hand is relaxed
+     * — e.g. right after the glove connects and at the start of each round.
+     *
+     * @returns `true` if at least one connected hand was calibrated.
+     */
+    public calibrate(): boolean {
+        let calibrated = false;
+        for (const hand of [this.leftHand, this.rightHand]) {
+            if (!hand.connected) continue;
+            hand.baseline = [...hand.adc];
+            calibrated = true;
+        }
+        if (calibrated) {
+            console.log(
+                '[RehaPiano] Calibrated baseline — L:',
+                this.leftHand.baseline,
+                'R:',
+                this.rightHand.baseline,
+            );
+        }
+        return calibrated;
+    }
+
+    /**
+     * Returns the baseline-corrected ADC array for a hand: raw readings minus
+     * the resting baseline captured by {@link calibrate}. With the hand at
+     * rest every channel is ~0, so callers can apply a symmetric dead zone
+     * without the sensor bias leaking through as drift.
+     *
+     * @param hand - Which hand to query (`'left'` or `'right'`).
+     * @returns A 6-element array of baseline-corrected ADC values.
+     */
+    public getCorrectedHandAdc(hand: 'left' | 'right'): number[] {
+        const state = hand === 'left' ? this.leftHand : this.rightHand;
+        return state.adc.map((v, i) => (v || 0) - (state.baseline[i] || 0));
+    }
+
+    /**
+     * Computes the signed, baseline-corrected average ADC value across all
+     * finger sensors of every connected hand.
      *
      * The returned value preserves sign: positive values indicate overall
      * finger compression (flexion), negative values indicate extension.
@@ -310,7 +363,7 @@ export class RehaPianoConnection {
         for (const hand of [this.leftHand, this.rightHand]) {
             if (!hand.connected) continue;
             for (const idx of RehaPianoConnection.FINGER_ADC_INDICES) {
-                sum += hand.adc[idx] || 0;
+                sum += (hand.adc[idx] || 0) - (hand.baseline[idx] || 0);
                 count++;
             }
         }

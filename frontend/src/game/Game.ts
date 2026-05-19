@@ -64,6 +64,14 @@ export class Game {
     protected rehaPianoApiBase: string = '';
     protected hasLoggedFirstInput: boolean = false;
     protected virtualKeysDown: Set<string> = new Set();
+    /** Low-pass filtered RehaPiano velocity — smooths out raw sensor jitter. */
+    protected smoothedRehaVelocity: number = 0;
+    /**
+     * EMA weight for the RehaPiano low-pass filter (0–1). Lower = smoother but
+     * laggier. The analog gloves are noisy, so we filter the derived velocity
+     * the same way the keyboard path is acceleration-smoothed.
+     */
+    protected readonly rehaSmoothingFactor: number = 0.25;
 
     // Doctor settings
     protected doctorSettings: DoctorSettings | undefined;
@@ -117,6 +125,7 @@ export class Game {
                     gameDebugger.log('RehaPiano connected');
                     this.createRehaPianoStatusIndicator();
                     this.enableVirtualMode();
+                    this.scheduleRehaPianoCalibration();
                 })
                 .catch((error) => {
                     console.warn('[Game] RehaPiano connection failed, keyboard fallback:', error);
@@ -192,25 +201,7 @@ export class Game {
         storage.setHighScore(newScore);
     }
 
-    protected setGameOptionButtons(options: GameOptions) {
-        const optionsButtons = document.getElementById('game-options')!;
-        const easyMode = optionsButtons.getElementsByClassName(
-            'option-easy',
-        )[0] as HTMLAnchorElement;
-        const debugMode = optionsButtons.getElementsByClassName(
-            'option-debug',
-        )[0] as HTMLAnchorElement;
-
-        easyMode.innerText = `easy mode (${options.isEasyModeOn ? 'ON' : 'OFF'})`;
-        easyMode.href = '?';
-        easyMode.href += options.isEasyModeOn ? '' : 'easy';
-        easyMode.href += options.isDebugOn ? 'debug' : '';
-
-        debugMode.innerText = `debug (${options.isDebugOn ? 'ON' : 'OFF'})`;
-        debugMode.href = '?';
-        debugMode.href += options.isEasyModeOn ? 'easy' : '';
-        debugMode.href += options.isDebugOn ? '' : 'debug';
-    }
+    protected setGameOptionButtons(_options: GameOptions) {}
 
     protected static readonly VIRTUAL_KEYS = new Set([
         'q',
@@ -325,27 +316,65 @@ export class Game {
      * Applies a dead-zone threshold and clamps to the current max velocity.
      * @returns Control velocity (positive = down/compression, negative = up/extension), or 0 if unavailable.
      */
-    protected getRehaPianoControlVelocity(): number {
-        if (!this.rehaPianoEnabled || !this.rehaPiano.isConnected) return 0;
-        if (!this.rehaPiano.isDataFresh()) return 0;
+    /**
+     * Zeroes the glove's resting bias once a short settle window has passed,
+     * so the gloves must have steady samples in hand before we snapshot the
+     * baseline. The patient's hand is expected to be relaxed at this point
+     * (just connected / between rounds), which removes any default draft.
+     */
+    protected scheduleRehaPianoCalibration(delayMs: number = 700): void {
+        setTimeout(() => {
+            if (this.rehaPiano.isConnected && this.rehaPiano.isDataFresh()) {
+                this.rehaPiano.calibrate();
+            }
+            this.smoothedRehaVelocity = 0;
+        }, delayMs);
+    }
 
-        // Get average ADC force across the doctor-configured active hand(s) and finger(s).
+    protected getRehaPianoControlVelocity(): number {
+        if (!this.rehaPianoEnabled || !this.rehaPiano.isConnected) {
+            this.smoothedRehaVelocity = 0;
+            return 0;
+        }
+        // Stale data → ease back to neutral instead of freezing on the last value.
+        if (!this.rehaPiano.isDataFresh()) {
+            this.smoothedRehaVelocity *= 1 - this.rehaSmoothingFactor;
+            return this.smoothedRehaVelocity;
+        }
+
+        // Baseline-corrected average ADC force across the doctor-configured
+        // active hand(s) and finger(s). With the hand at rest this is ~0
+        // (the glove's resting bias was zeroed out by calibration), so the
+        // bird has no default draft.
         // Positive = compression (pressing down), Negative = extension (lifting up).
         const avgForce = this.getActiveAverageFingerValue();
 
-        // Dead zone: ignore small forces below the threshold to prevent jitter
-        // from sensor noise when the patient's hand is at rest.
-        if (Math.abs(avgForce) < this.rehaPianoThreshold) return 0;
+        // Dead zone: below the threshold treat it as "no input" and let the
+        // filtered velocity decay smoothly back to zero (no abrupt stop).
+        let targetVelocity: number;
+        if (Math.abs(avgForce) < this.rehaPianoThreshold) {
+            targetVelocity = 0;
+        } else {
+            // Convert force to velocity, measuring from the dead-zone edge so
+            // there is no jump from 0 to threshold*scale at the boundary.
+            // Sign is preserved: compression → down, extension → up.
+            const effectiveForce =
+                avgForce - Math.sign(avgForce) * this.rehaPianoThreshold;
+            targetVelocity = effectiveForce * this.rehaPianoScale;
 
-        // Convert raw force to game velocity: force * scale factor.
-        // The sign is preserved, so compression → positive velocity (bird down)
-        // and extension → negative velocity (bird up).
-        let velocity = avgForce * this.rehaPianoScale;
+            // Clamp to the current max (may shrink as difficulty increases).
+            const maxVelocity = this.getMaxControlVelocity();
+            targetVelocity = Math.max(
+                -maxVelocity,
+                Math.min(maxVelocity, targetVelocity),
+            );
+        }
 
-        // Clamp velocity to the current maximum (which may decrease as
-        // the level progression system increases difficulty).
-        const maxVelocity = this.getMaxControlVelocity();
-        velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity));
+        // Low-pass (exponential moving average) filter: rejects sensor jitter
+        // and brief noise spikes so a momentary blip can't twitch the bird.
+        this.smoothedRehaVelocity +=
+            (targetVelocity - this.smoothedRehaVelocity) * this.rehaSmoothingFactor;
+        const velocity = this.smoothedRehaVelocity;
 
         if (!this.hasLoggedFirstInput && Math.abs(velocity) > 0.01) {
             this.hasLoggedFirstInput = true;
@@ -383,7 +412,7 @@ export class Game {
                     ? this.rehaPiano.leftHandConnected
                     : this.rehaPiano.rightHandConnected;
             if (!connected) continue;
-            const adc = this.rehaPiano.getHandAdc(hand);
+            const adc = this.rehaPiano.getCorrectedHandAdc(hand);
             for (let i = 0; i < 5; i++) {
                 if (!settings.activeFingers[hand][i]) continue;
                 sum += adc[i + 1] || 0;
@@ -454,6 +483,11 @@ export class Game {
         this.currentScore = 0;
         this.keyboardControlVelocity = 0;
         this.targetControlVelocity = 0;
+        this.smoothedRehaVelocity = 0;
+        // Re-zero the glove between rounds — the hand is at rest on the splash.
+        if (this.rehaPianoEnabled && this.rehaPiano.isConnected) {
+            this.scheduleRehaPianoCalibration();
+        }
         this.levelProgression = this.doctorSettings
             ? LevelProgression.fromDoctorSettings(this.doctorSettings)
             : new LevelProgression();
@@ -464,6 +498,7 @@ export class Game {
                 .connect()
                 .then(() => {
                     gameDebugger.log('RehaPiano reconnected');
+                    this.scheduleRehaPianoCalibration();
                 })
                 .catch(() => {});
         }
